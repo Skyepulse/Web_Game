@@ -8,8 +8,8 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/room/:roomID" element={<WaitingRoom />} />
         <Route path="/" element={<MainView />} />
-        <Route path="/waiting-room" element={<WaitingRoom />} />
       </Routes>
     </Router>
   );

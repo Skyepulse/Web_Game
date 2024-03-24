@@ -1,26 +1,27 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 function WaitingRoom() {
-    const possibleAnonymousNames = useRef(['Turtoise', 'Lion', 'Elephant', 'Giraffe', 'Penguin', 'Kangaroo', 'Panda', 'Koala', 'Tiger', 'Zebra']);
     const [users, setUsers] = useState([]);
     const location = useLocation();
-    const userName = useRef(location.state?.name);
+    const history = useNavigate();
+    const {roomID} = useParams(); //We extract the roomID from the URL
+    console.log('roomID', roomID);
+    const userName = useRef(location.state?.name || 'Anonymous');
     const ws = useRef(null);
 
-    let history = useNavigate();
 
     const joinTeam = (team) => {
         if (ws.current) {
-            ws.current.send(JSON.stringify({ type: 'changeTeam', color: team }));
+            ws.current.send(JSON.stringify({ type: 'changeTeam', color: team, roomID: roomID}));
             localStorage.setItem('team', team);
         }
     };
 
     function getOrCreateUserId() {
         let userID = localStorage.getItem('userID');
-        if(!userID) {
-            userID = 'user-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
+        if (!userID) {
+            userID = Date.now().toString(); // Simple userID generation logic
             localStorage.setItem('userID', userID);
         }
         return userID;
@@ -36,26 +37,29 @@ function WaitingRoom() {
     }
 
     useEffect(() => {
+        const userID = getOrCreateUserId();
         ws.current = new WebSocket('ws://localhost:3001'); //Matches server.js
 
         ws.current.onopen = () => {
-            console.log('Connected to the server');
-            const userID = getOrCreateUserId();
-            if(userName.current === ''){
-                userName.current = possibleAnonymousNames.current[Math.floor(Math.random() * possibleAnonymousNames.current.length)] + ' ' + Math.floor(Math.random() * 1000);
-                console.log('Generated user name:', userName.current);
+            console.log('Connected to the server from WaitingRoom');
+            if(!localStorage.getItem('userName')) {
+                localStorage.setItem('userName', userName.current);
+            } else {
+                userName.current = localStorage.getItem('userName');
             }
-            localStorage.setItem('userName', userName.current);
             const team = localStorage.getItem('team') || 'none';
-            ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team }));
+            console.log('Sending message', { type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID})
+            ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID}));
         };
 
         
         
         ws.current.onmessage = (message) => {
-            console.log('Received message from server:', message.data);
-            const receivedUsers = JSON.parse(message.data);
-            setUsers(receivedUsers);
+            console.log('Received message', message.data);
+            const response = JSON.parse(message.data);
+            if(response.type === 'updateUsers') {
+                setUsers(response.users);
+            }
         };
 
         ws.current.onclose = () => {
@@ -66,7 +70,7 @@ function WaitingRoom() {
             if(ws.current.readyState === 1)
                 ws.current.close();
         };
-    }, [userName]);
+    }, [roomID]);
 
     return (
         <div>

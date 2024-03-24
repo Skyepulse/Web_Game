@@ -1,7 +1,7 @@
 {
   "name": "my-projects",
   "version": "1.0.0",
-  "scripts" :{
+  "scripts": {
     "start": "concurrently \"npm:start --prefix my-server-app\" \"npm:start --prefix backend-app\""
   },
   "dependencies": {

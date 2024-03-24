@@ -7,7 +7,7 @@ const server = http.createServer(app);
 
 const wss = new WebSocket.Server({ server });
 
-let users = []; // Store all connected users
+const rooms = {}; // Store all rooms
 
 wss.on('connection', (ws) => {
     let userID = null;
@@ -15,35 +15,48 @@ wss.on('connection', (ws) => {
         try {
             const data = JSON.parse(message);
 
+            if(data.type === 'createRoom') {
+                const roomID = 'room-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
+                rooms[roomID] = { users: [] };
+                ws.roomID = roomID;
+                ws.send(JSON.stringify({ type: 'roomCreated', roomID: roomID }));
+            }
+
             if(data.type === 'setUser') {
+                const roomID = data.roomID;
+                ws.roomID = roomID;
+
+                if(!rooms[roomID]) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
+                    return;
+                }
+
                 const userId = data.userID;
                 userID = userId;
                 const userName = data.name;
                 const team = data.team;
-                if(users.find(user => user.id === userId)) {
-                    //We modify ws with the new connection
-                    users = users.map(user => {
-                        if(user.id === userId) {
-                            user.ws = ws;
-                            user.name = userName;
-                            user.team = team;
-                        }
-                        return user;
-                    });
+
+                const user = rooms[roomID].users.find(user => user.id === userId);
+                
+                if(user) {
+                    user.ws = ws;
+                    user.name = userName;
+                    user.team = team;
                 } else {
-                    users.push({ id: userId, name: userName, team: team, ws });
+                    rooms[roomID].users.push({ id: userId, name: userName, team: team, ws });
                 }
-                broadcastUsers();
+                broadcastUsers(roomID);
             }
 
             if(data.type === 'changeTeam') {
-                users = users.map(user => {
+                const roomID = data.roomID;
+                rooms[roomID].users = rooms[roomID].users.map(user => {
                     if(user.id === userID) {
                         user.team = data.color;
                     }
                     return user;
                 });
-                broadcastUsers();
+                broadcastUsers(roomID);
             }
         } catch (error) {
             console.error('Failed to parse message', error);
@@ -51,15 +64,23 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        users = users.filter(user => user.id !== userID);
-        broadcastUsers();
+        if(ws.roomID && rooms[ws.roomID]) {
+            rooms[ws.roomID].users = rooms[ws.roomID].users.filter(user => user.ws !== ws);
+            broadcastUsers(ws.roomID);
+        }
     });
 });
 
-function broadcastUsers() {
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(users.map(({ id, name, team }) => ({ id, name, team }))));
+function broadcastUsers(roomID) {
+    const room = rooms[roomID];
+    if(!room) return;
+
+    room.users.forEach(({ ws }) => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'updateUsers',
+                users: room.users.map(({ id, name, team }) => ({ id, name, team }))
+            }));
         }
     });
 }
