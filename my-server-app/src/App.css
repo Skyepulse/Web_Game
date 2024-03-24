@@ -33,3 +33,81 @@ button {
   font-size: 1rem;
   cursor: pointer;
 }
+
+h2 {
+  color: red;
+  text-align: center;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 300%;
+}
+
+#teams {
+  display: flex;
+  justify-content: space-between;
+}
+
+.team {
+  text-align: center;
+  background-color: white;
+  padding-left: 20px;
+  padding-right: 20px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 200%;
+}
+
+#red{
+  background-color: rgb(119, 14, 14);
+  color: white;
+  border: 5px solid black;
+}
+
+#blue{
+  background-color: rgb(14, 14, 119);
+  color: white;
+  border: 5px solid black;
+}
+
+#none{
+  background-color: rgb(119, 119, 119);
+  color: white;
+  border: 5px solid black;
+}
+
+#TeamButtons {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  transform: scale(2);
+  gap: 100px;
+}
+
+
+#joinRed {
+  background-color: rgb(119, 14, 14);
+  color: white;
+}
+
+#joinRed:hover {
+  scale: 1.1;
+  background-color: rgb(139, 47, 47)
+}
+
+#joinRed:active {
+  scale: 1.1;
+  background-color: rgb(51, 21, 21)
+}
+
+#joinBlue {
+  background-color: rgb(14, 14, 119);
+  color: white;
+}
+
+#joinBlue:hover {
+  scale: 1.1;
+  background-color: rgb(34, 34, 139)
+}
+
+#joinBlue:active {
+  scale: 1.1;
+  background-color: rgb(21, 21, 51)
+}
