@@ -17,6 +17,7 @@ function MainView() {
             const response = JSON.parse(message.data);
 
             if(response.type === 'roomCreated') {
+                localStorage.setItem('LastRoomID', response.roomID);
                 history(`/room/${response.roomID}`, { state: { name } });
             }
         };

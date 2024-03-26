@@ -41,14 +41,23 @@ function WaitingRoom() {
         ws.current = new WebSocket('ws://localhost:3001'); //Matches server.js
 
         ws.current.onopen = () => {
+            //We first check if we have entered this room before, if not we redirect to the main view
+            if(localStorage.getItem('LastRoomID') !== roomID) {
+                localStorage.setItem('LastRoomID', roomID);
+                history('/join');
+            }
             console.log('Connected to the server from WaitingRoom');
             if(!localStorage.getItem('userName')) {
                 localStorage.setItem('userName', userName.current);
             } else {
                 userName.current = localStorage.getItem('userName');
             }
+
+            if(location.state?.name) {
+                localStorage.setItem('userName', location.state.name);
+                userName.current = location.state.name;
+            }
             const team = localStorage.getItem('team') || 'none';
-            console.log('Sending message', { type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID})
             ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID}));
         };
 
@@ -60,6 +69,11 @@ function WaitingRoom() {
             if(response.type === 'updateUsers') {
                 setUsers(response.users);
             }
+            else if(response.type === 'error') {
+                console.error(response.message);
+                alert(response.message);
+                history('/');
+            }
         };
 
         ws.current.onclose = () => {
@@ -70,7 +84,7 @@ function WaitingRoom() {
             if(ws.current.readyState === 1)
                 ws.current.close();
         };
-    }, [roomID]);
+    }, [roomID, history, location.state?.name]);
 
     return (
         <div>

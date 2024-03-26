@@ -64,8 +64,12 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        if(ws.roomID && rooms[ws.roomID]) {
+        if(ws.roomID && rooms[ws.roomID] && rooms[ws.roomID].users.length > 0) {
             rooms[ws.roomID].users = rooms[ws.roomID].users.filter(user => user.ws !== ws);
+            //If users is empty, delete the room
+            if(rooms[ws.roomID].users.length === 0) {
+                delete rooms[ws.roomID];
+            }
             broadcastUsers(ws.roomID);
         }
     });
