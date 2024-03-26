@@ -1,11 +1,43 @@
-import React, { useState} from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function JoinRoom() {
     const [name, setName] = useState('');
+    const ws = useRef(null);
     let history = useNavigate();
+    const canJoin = useRef(false);
+
+    useEffect(() => {
+        ws.current = new WebSocket('ws://localhost:3001');
+        
+        ws.current.onopen = () => {
+            if(!localStorage.getItem('LastRoomID')){
+                alert('Please create a room first before joining');
+                history('/');
+            
+            }
+            ws.current.send(JSON.stringify({ type: 'roomExists', roomID: localStorage.getItem('LastRoomID') }));
+        };
+
+        ws.current.onmessage = (message) => {
+            const response = JSON.parse(message.data);
+
+            if(response.type === 'roomExists') {
+                canJoin.current = true;
+            } else if(response.type === 'roomNotFound') {
+                alert('The room you are trying to join does not exist. Please create a room first.');
+                history('/');
+            }
+        }
+
+        ws.current.onclose = () => {
+            console.log('Connection closed from MainView');
+        };
+    });
 
     const handlePlayClick = () => {
+        if(!canJoin.current) 
+            return;
         if (name.trim()) { 
             const roomID = localStorage.getItem('LastRoomID');
             localStorage.setItem('userName', name);
@@ -17,7 +49,7 @@ function JoinRoom() {
 
     return(
         <div className="App">
-            <header className="App-header">
+            <header className="App-header" id='joinRoomHeader'>
                 <p>Hello. To join the room choose a name!!</p>
                 <input
                     type='text' 

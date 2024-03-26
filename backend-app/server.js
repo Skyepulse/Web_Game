@@ -15,9 +15,18 @@ wss.on('connection', (ws) => {
         try {
             const data = JSON.parse(message);
 
+            if(data.type === 'roomExists') {
+                const roomID = data.roomID;
+                if(rooms[roomID]) {
+                    ws.send(JSON.stringify({ type: 'roomExists', roomID: roomID }));
+                } else {
+                    ws.send(JSON.stringify({ type: 'roomNotFound', roomID: roomID }));
+                }
+            }
+
             if(data.type === 'createRoom') {
                 const roomID = 'room-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
-                rooms[roomID] = { users: [] };
+                rooms[roomID] = { users: [], masterUserID: null};
                 ws.roomID = roomID;
                 ws.send(JSON.stringify({ type: 'roomCreated', roomID: roomID }));
             }
@@ -35,15 +44,26 @@ wss.on('connection', (ws) => {
                 userID = userId;
                 const userName = data.name;
                 const team = data.team;
+                let master = data.master;
+
+                ws.master = master;
+                if(!rooms[roomID].masterUserID && master) {
+                    rooms[roomID].masterUserID = userId;
+                    ws.master = true;
+                } else {
+                    ws.master = false;
+                    master = false;
+                }
 
                 const user = rooms[roomID].users.find(user => user.id === userId);
                 
                 if(user) {
                     user.ws = ws;
-                    user.name = userName;
+                    user.name = 'ALREADY SET';
                     user.team = team;
+                    user.master = master;
                 } else {
-                    rooms[roomID].users.push({ id: userId, name: userName, team: team, ws });
+                    rooms[roomID].users.push({ id: userId, name: userName, team: team, master: master, ws });
                 }
                 broadcastUsers(roomID);
             }
@@ -69,6 +89,14 @@ wss.on('connection', (ws) => {
             //If users is empty, delete the room
             if(rooms[ws.roomID].users.length === 0) {
                 delete rooms[ws.roomID];
+            } else {
+                if(ws.master){
+                    //We have to reassign the master of the room to a random user in the room
+                    const newMaster = rooms[ws.roomID].users[Math.floor(Math.random() * rooms[ws.roomID].users.length)];
+                    newMaster.master = true;
+                    newMaster.ws.master = true;
+                    rooms[ws.roomID].masterUserID = newMaster.id;
+                }
             }
             broadcastUsers(ws.roomID);
         }
@@ -83,7 +111,7 @@ function broadcastUsers(roomID) {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 type: 'updateUsers',
-                users: room.users.map(({ id, name, team }) => ({ id, name, team }))
+                users: room.users.map(({ id, name, team, master }) => ({ id, name, team, master }))
             }));
         }
     });

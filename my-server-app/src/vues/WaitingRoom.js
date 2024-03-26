@@ -3,11 +3,12 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 function WaitingRoom() {
     const [users, setUsers] = useState([]);
+    const [headerColor, setHeaderColor] = useState('black'); //We will use this to determine the color of the header [black, red, blue]
     const location = useLocation();
     const history = useNavigate();
     const {roomID} = useParams(); //We extract the roomID from the URL
-    console.log('roomID', roomID);
     const userName = useRef(location.state?.name || 'Anonymous');
+    const master = useRef(location.state?.master || false);
     const ws = useRef(null);
 
 
@@ -26,6 +27,20 @@ function WaitingRoom() {
         }
         return userID;
     }
+
+    const startGame = () => {
+        if (ws.current) {
+            //If we are the master, change the header color to green if black, and black if green
+            const me = users.find(user => user.id === localStorage.getItem('userID'));
+            if(me.master) {
+                if(headerColor === 'black') {
+                    setHeaderColor('green');
+                } else {
+                    setHeaderColor('black');
+                }
+            }
+        }
+    };
 
     function disconnect() {
         //We clear the local storage
@@ -46,7 +61,7 @@ function WaitingRoom() {
                 localStorage.setItem('LastRoomID', roomID);
                 history('/join');
             }
-            console.log('Connected to the server from WaitingRoom');
+            console.log('Connected to the server from WaitingRoom (T\'as perdu le jeu)');
             if(!localStorage.getItem('userName')) {
                 localStorage.setItem('userName', userName.current);
             } else {
@@ -58,7 +73,7 @@ function WaitingRoom() {
                 userName.current = location.state.name;
             }
             const team = localStorage.getItem('team') || 'none';
-            ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID}));
+            ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID, master: master.current}));
         };
 
         
@@ -84,17 +99,17 @@ function WaitingRoom() {
             if(ws.current.readyState === 1)
                 ws.current.close();
         };
-    }, [roomID, history, location.state?.name]);
+    }, [roomID, history, location.state?.name, master]);
 
     return (
         <div>
-            <h2>Waiting Room</h2>
+            <h2 style={{color: headerColor}}>Waiting Room</h2>
             <div id='teams'>
                 <div id='red' className='team'>
                     <h3>Red Team</h3>
                     <ul>
                         {users.filter(user => user.team === 'red').map(user => (
-                            <li key={user.id}>{user.name}</li>
+                            <li key={user.id} style = {{color: user.master ? 'green': 'inherit'}}>{user.name}</li>
                         ))}
                     </ul>
                 </div>
@@ -102,7 +117,7 @@ function WaitingRoom() {
                     <h3>Choose a team!</h3>
                     <ul>
                         {users.filter(user => user.team === 'none').map(user => (
-                            <li key={user.id}>{user.name}</li>
+                            <li key={user.id} style = {{color: user.master ? 'green': 'inherit'}}>{user.name}</li>
                         ))}
                     </ul>
                 </div>
@@ -110,7 +125,7 @@ function WaitingRoom() {
                     <h3>Blue Team</h3>
                     <ul>
                         {users.filter(user => user.team === 'blue').map(user => (
-                            <li key={user.id}>{user.name}</li>
+                            <li key={user.id} style = {{color: user.master ? 'green': 'inherit'}}>{user.name}</li>
                         ))}
                     </ul>
                 </div>
@@ -118,6 +133,9 @@ function WaitingRoom() {
             <div id = 'TeamButtons'>
                 <button id='joinRed' onClick={() =>{joinTeam('red')}}>Join Red</button>
                 <button id='joinBlue' onClick={() =>{joinTeam('blue')}}>Join Blue</button>
+            </div>
+            <div id='startGameDiv'>
+                <button id='startGame' onClick={() => {startGame()}}>Start Game</button>
             </div>
             <button id = 'Disconnect' onClick={() => {disconnect()}}>Disconnect</button>
         </div>

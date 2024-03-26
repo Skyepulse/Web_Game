@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'; //useNavigate is a hook that giv
 
 function MainView() {
     const [name, setName] = useState('');
+    const [master] = useState(true); //We will use this to determine if the user is the master of the room
     const ws = useRef(null);
     let history = useNavigate();
 
@@ -18,7 +19,7 @@ function MainView() {
 
             if(response.type === 'roomCreated') {
                 localStorage.setItem('LastRoomID', response.roomID);
-                history(`/room/${response.roomID}`, { state: { name } });
+                history(`/room/${response.roomID}`, { state: { name, master } });
             }
         };
 
@@ -44,8 +45,11 @@ function MainView() {
 
     return(
         <div className="App">
+            <h1> 
+                My web game name.  
+            </h1>
             <header className="App-header">
-                <p>Hello Choose a Name!!</p>
+                <p>Hello Choose a Name to create a waiting room!!</p>
                 <input
                     type='text' 
                     placeholder='Enter your name...'
