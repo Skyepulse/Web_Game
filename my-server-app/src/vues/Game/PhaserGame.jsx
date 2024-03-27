@@ -45,7 +45,3 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene}, r
         <div id="gameContainer"></div>
     );
 });
-
-PhaserGame.propTypes = {
-    currentActiveScene: PropTypes.func 
-}
