@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 function WaitingRoom() {
     const [users, setUsers] = useState([]);
-    const [headerColor, setHeaderColor] = useState('black'); //We will use this to determine the color of the header [black, red, blue]
+    const [headerColor] = useState('black'); //We will use this to determine the color of the header [black, red, blue]
     const location = useLocation();
     const history = useNavigate();
     const {roomID} = useParams(); //We extract the roomID from the URL
@@ -33,11 +33,7 @@ function WaitingRoom() {
             //If we are the master, change the header color to green if black, and black if green
             const me = users.find(user => user.id === localStorage.getItem('userID'));
             if(me.master) {
-                if(headerColor === 'black') {
-                    setHeaderColor('green');
-                } else {
-                    setHeaderColor('black');
-                }
+                ws.current.send(JSON.stringify({ type: 'startGame', roomID: roomID }));
             }
         }
     };
@@ -88,6 +84,9 @@ function WaitingRoom() {
                 console.error(response.message);
                 alert(response.message);
                 history('/');
+            } else if(response.type === 'startGame') {
+               const gameRoomID = response.gameRoomID;
+                history(`/game/${gameRoomID}`);
             }
         };
 

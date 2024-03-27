@@ -17,6 +17,10 @@ function MainView() {
         ws.current.onmessage = (message) => {
             const response = JSON.parse(message.data);
 
+            if(response.type === 'error'){
+                alert(response.message);
+                history('/');
+            }
             if(response.type === 'roomCreated') {
                 localStorage.setItem('LastRoomID', response.roomID);
                 history(`/room/${response.roomID}`, { state: { name, master } });

@@ -15,6 +15,17 @@ wss.on('connection', (ws) => {
         try {
             const data = JSON.parse(message);
 
+            if(data.type === 'startGame') {
+                const roomID = data.roomID;
+                const room = rooms[roomID];
+                if(room && room.masterUserID !== userID) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'You are not the master of this room! You cannot launch the game.' }));
+                    return;
+                }
+
+                broadcastStartGame(roomID);
+            }
+
             if(data.type === 'roomExists') {
                 const roomID = data.roomID;
                 if(rooms[roomID]) {
@@ -112,6 +123,21 @@ function broadcastUsers(roomID) {
             ws.send(JSON.stringify({
                 type: 'updateUsers',
                 users: room.users.map(({ id, name, team, master }) => ({ id, name, team, master }))
+            }));
+        }
+    });
+}
+
+function broadcastStartGame(roomID) {
+    const room = rooms[roomID];
+    if(!room) return;
+    const gameRoomID = roomID + '-game';
+
+    room.users.forEach(({ ws }) => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'startGame',
+                gameRoomID: gameRoomID
             }));
         }
     });

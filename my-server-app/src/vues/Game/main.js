@@ -9,7 +9,7 @@ const config = {
     type: Phaser.AUTO,
     width: 1024,
     height: 768,
-    parent: 'game-container',
+    parent: 'gameContainer',
     backgroundColor: '#028af8',
     scene: [
         Boot,

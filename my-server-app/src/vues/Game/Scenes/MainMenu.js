@@ -12,6 +12,7 @@ export class MainMenu extends Scene
 
     create()
     {
+        console.log('Main Menu scene loaded');
         this.add.image(512, 384, 'background');
 
         this.logo = this.add.image(512, 300, 'logo').setDepth(100);
@@ -27,13 +28,7 @@ export class MainMenu extends Scene
 
     changeScene ()
     {
-        if (this.logoTween)
-        {
-            this.logoTween.stop();
-            this.logoTween = null;
-        }
-
-        this.scene.start('Game');
+        console.log('Changing scene TO THE SUPPOSED MAIN GAME SCENE');
     }
 
     moveLogo (reactCallback)
