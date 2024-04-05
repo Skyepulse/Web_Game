@@ -11,7 +11,6 @@ function MainView() {
         ws.current = new WebSocket('ws://localhost:3001'); //Matches server.js
 
         ws.current.onopen = () => {
-            console.log('Connected to the server from MainView');
         };
 
         ws.current.onmessage = (message) => {
@@ -28,7 +27,6 @@ function MainView() {
         };
 
         ws.current.onclose = () => {
-            console.log('Connection closed from MainView');
         };
 
         return () => {

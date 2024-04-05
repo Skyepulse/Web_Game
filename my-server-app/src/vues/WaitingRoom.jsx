@@ -30,6 +30,11 @@ function WaitingRoom() {
 
     const startGame = () => {
         if (ws.current && users.length > 1) {
+            //We check that all users found a team SO no users has team 'none'
+            if(users.find(user => user.team === 'none')) {
+                alert('Some users have not chosen a team yet');
+                return;
+            }
             const me = users.find(user => user.id === localStorage.getItem('userID'));
             if(me.master) {
                 ws.current.send(JSON.stringify({ type: 'startGame', roomID: roomID }));
@@ -55,10 +60,10 @@ function WaitingRoom() {
         ws.current.onopen = () => {
             //We first check if we have entered this room before, if not we redirect to the main view
             if(localStorage.getItem('LastRoomID') !== roomID) {
+                localStorage.clear();
                 localStorage.setItem('LastRoomID', roomID);
                 history('/join');
             }
-            console.log('Connected to the server from WaitingRoom (T\'as perdu le jeu)');
             if(!localStorage.getItem('userName')) {
                 localStorage.setItem('userName', userName.current);
             } else {
@@ -76,7 +81,6 @@ function WaitingRoom() {
         
         
         ws.current.onmessage = (message) => {
-            console.log('Received message', message.data);
             const response = JSON.parse(message.data);
             if(response.type === 'updateUsers') {
                 setUsers(response.users);
@@ -84,6 +88,7 @@ function WaitingRoom() {
             else if(response.type === 'error') {
                 console.error(response.message);
                 alert(response.message);
+                localStorage.clear();
                 history('/');
             } else if(response.type === 'startGame') {
                 const gameRoomID = response.gameRoomID;
@@ -92,7 +97,6 @@ function WaitingRoom() {
         };
 
         ws.current.onclose = () => {
-            console.log('Disconnected from the server');
         };
 
         return () => {

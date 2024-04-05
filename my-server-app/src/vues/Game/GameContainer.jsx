@@ -5,7 +5,7 @@ import {PhaserGame} from './PhaserGame';
 function GameContainer(){
     const phaserRef = useRef();
     return(
-        <div class='gameApp'>
+        <div className='gameApp'>
             <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} />
         </div>
     );
