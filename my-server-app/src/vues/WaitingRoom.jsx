@@ -29,12 +29,13 @@ function WaitingRoom() {
     }
 
     const startGame = () => {
-        if (ws.current) {
-            //If we are the master, change the header color to green if black, and black if green
+        if (ws.current && users.length > 1) {
             const me = users.find(user => user.id === localStorage.getItem('userID'));
             if(me.master) {
                 ws.current.send(JSON.stringify({ type: 'startGame', roomID: roomID }));
             }
+        } else if (users.length <= 1) {
+            alert('You need at least 2 players to start the game');
         }
     };
 
@@ -85,7 +86,7 @@ function WaitingRoom() {
                 alert(response.message);
                 history('/');
             } else if(response.type === 'startGame') {
-               const gameRoomID = response.gameRoomID;
+                const gameRoomID = response.gameRoomID;
                 history(`/game/${gameRoomID}`);
             }
         };
