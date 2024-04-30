@@ -147,23 +147,63 @@ h2 {
   gap: 100px;
 }
 
+/* GAME APP CSS */
+
 .gameApp{
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
   display: flex;
+  flex-direction: row;
   justify-content: center;
+  align-items: center;
   background-color: gray;
   padding: 0%;
   margin: 0%;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .gameAppNext{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
   background-color: green;
   text-align: center;
-  flex-grow: 1;
+  width: 100%;
+  height: 100vh;
+}
+
+h1 {
+  font-size: 300%;
+  font-family: 'Courier New', Courier, monospace;
+  margin: 0;
+  margin-top: 10px;
+}
+
+.teamPoints{
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  background-color: tomato;
+  width: 100%;
+}
+
+.team{
+  background-color: violet;
+  margin: 10px;
+}
+
+#team1{
+  color: blue;
+}
+
+#team2{
+  color: red;
+}
+
+h2{
+  font-size: 100%;
+}
+
+h3{
+  font-size: 70%;
 }

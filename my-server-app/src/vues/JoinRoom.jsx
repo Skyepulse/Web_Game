@@ -31,7 +31,6 @@ function JoinRoom() {
         }
 
         ws.current.onclose = () => {
-            console.log('Connection closed from MainView');
         };
     });
 

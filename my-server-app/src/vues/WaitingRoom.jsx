@@ -10,7 +10,7 @@ function WaitingRoom() {
     const userName = useRef(location.state?.name || 'Anonymous');
     const master = useRef(location.state?.master || false);
     const ws = useRef(null);
-
+    const usersRef = useRef(users);
 
     const joinTeam = (team) => {
         if (ws.current) {
@@ -29,6 +29,7 @@ function WaitingRoom() {
     }
 
     const startGame = () => {
+        console.log('BEFORE BEFORE USERS: ', users);
         if (ws.current && users.length > 1) {
             //We check that all users found a team SO no users has team 'none'
             if(users.find(user => user.team === 'none')) {
@@ -92,7 +93,8 @@ function WaitingRoom() {
                 history('/');
             } else if(response.type === 'startGame') {
                 const gameRoomID = response.gameRoomID;
-                history(`/game/${gameRoomID}`);
+                console.log('BEFORE USERS: ', usersRef.current);
+                history(`/game/${gameRoomID}`, {state: {users: usersRef.current}});
             }
         };
 
@@ -104,6 +106,11 @@ function WaitingRoom() {
                 ws.current.close();
         };
     }, [roomID, history, location.state?.name, master]);
+
+    useEffect(() => {
+        usersRef.current = users;
+    }, [users]);
+
 
     return (
         <div>
