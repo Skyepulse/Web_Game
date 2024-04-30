@@ -94,7 +94,7 @@ function WaitingRoom() {
             } else if(response.type === 'startGame') {
                 const gameRoomID = response.gameRoomID;
                 console.log('BEFORE USERS: ', usersRef.current);
-                history(`/game/${gameRoomID}`, {state: {users: usersRef.current}});
+                history(`/game/${gameRoomID}`, {state: {users: usersRef.current, gameRoomID: gameRoomID}});
             }
         };
 

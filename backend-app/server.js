@@ -133,6 +133,16 @@ function broadcastStartGame(roomID) {
     if(!room) return;
     const gameRoomID = roomID + '-game';
 
+    const gameServerWs = new WebSocket('ws://localhost:4001');
+    gameServerWs.onOpen = () => {
+        gameServerWs.send(JSON.stringify({
+            type: 'initializeGame',
+            gameRoomID: gameRoomID,
+            users: room.users
+        }));
+        gameServerWs.close();
+    };
+
     room.users.forEach(({ ws }) => {
         if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
