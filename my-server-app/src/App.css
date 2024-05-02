@@ -254,3 +254,7 @@ ol li::before{
   color: red;
   border: 2px solid red;
 }
+
+ol .teamNameListElementLeft{
+  color:gray;
+}

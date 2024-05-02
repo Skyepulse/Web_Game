@@ -7,25 +7,27 @@ import {PhaserGame} from './PhaserGame';
 function GameContainer(){
     const phaserRef = useRef();
     const [users, setUsers] = useState([]);
+    const [leftUsers, setLeftUsers] = useState([]); 
     const gameRoomID = useRef();
     const location = useLocation();
     const history = useNavigate();
     const userID = useRef();
     const ws = useRef(null);
 
-    useEffect(() => {
-        if(location.state && location.state.users) {
-            setUsers(location.state.users);
-            console.log('Users: ', location.state.users);
-        } 
-        if(location.state && location.state.gameRoomID) {
-            gameRoomID.current = location.state.gameRoomID;
-            console.log('Game Room ID: ', location.state.gameRoomID);
+    const loadGameSession = () => {
+        const gameSessionData = location.state || JSON.parse(localStorage.getItem('gameSession'));
+        if(!gameSessionData) {
+            history('/');
+            return;
+        } else {
+            gameRoomID.current = gameSessionData.gameRoomID;
+            userID.current = gameSessionData.userID;
+            setUsers(gameSessionData.users);
+            localStorage.setItem('gameSession', JSON.stringify(gameSessionData));
         }
-        if(location.state && location.state.userID) {
-            userID.current = location.state.userID;
-        }
-    }, [location.state]);
+    };
+
+    useEffect(loadGameSession, [location.state, history]);
 
     useEffect(() => {
         ws.current = new WebSocket('ws://localhost:4001');
@@ -49,11 +51,12 @@ function GameContainer(){
                 const response = JSON.parse(message.data);
                 if(response.type === 'updateUsers') {
                     setUsers(response.users);
+                    if(response.leftUsers.length > 0) setLeftUsers(response.leftUsers);
+                    else setLeftUsers([]);
                 }
                 if(response.type === 'error') {
                     console.error(response.message);
                     alert(response.message);
-                    localStorage.clear();
                     history('/');
                 }
             } catch (error) {
@@ -70,9 +73,6 @@ function GameContainer(){
         }
     }, [location.state, history]);
 
-
-    
-
     return(
         <div className='gameApp'>
             <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} />
@@ -84,6 +84,9 @@ function GameContainer(){
                             {users.filter(user => user.team === 'blue').map(user => (
                                 <li className = 'teamNameListElement' key={user.id}><span>{user.name}</span></li>
                             ))}
+                            {leftUsers.filter(user => user.team === 'blue').map(user => (
+                                <li className = 'teamNameListElementLeft' key={user.id}><span>{user.name}</span></li>
+                            ))}
                         </ol>
                         <h3>Points: 0</h3>
                     </div>
@@ -92,6 +95,9 @@ function GameContainer(){
                         <ol className='teamlist' id = 'team2list'>
                             {users.filter(user => user.team === 'red').map(user => (
                                 <li className = 'teamNameListElement' key={user.id}><span>{user.name}</span></li>
+                            ))}
+                            {leftUsers.filter(user => user.team === 'red').map(user => (
+                                <li className = 'teamNameListElementLeft' key={user.id}><span>{user.name}</span></li>
                             ))}
                         </ol>
                         <h3>Points: 0</h3>
