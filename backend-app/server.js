@@ -22,8 +22,21 @@ wss.on('connection', (ws) => {
                     ws.send(JSON.stringify({ type: 'error', message: 'You are not the master of this room! You cannot launch the game.' }));
                     return;
                 }
-
                 broadcastStartGame(roomID);
+            }
+
+            if(data.type == 'startGameResponse'){
+                const gameRoomID = data.gameRoomID;
+                const roomID = data.roomID;
+                const room = rooms[roomID];
+                room.users.forEach(({ ws }) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'startGame',
+                            gameRoomID: gameRoomID,
+                        }));
+                    }
+                });
             }
 
             if(data.type === 'roomExists') {
@@ -134,23 +147,15 @@ function broadcastStartGame(roomID) {
     const gameRoomID = roomID + '-game';
 
     const gameServerWs = new WebSocket('ws://localhost:4001');
-    gameServerWs.onOpen = () => {
+    gameServerWs.onopen = () => {
         gameServerWs.send(JSON.stringify({
             type: 'initializeGame',
+            roomID: roomID,
             gameRoomID: gameRoomID,
             users: room.users
         }));
         gameServerWs.close();
     };
-
-    room.users.forEach(({ ws }) => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: 'startGame',
-                gameRoomID: gameRoomID
-            }));
-        }
-    });
 }
 
 const PORT = process.env.PORT || 3001;

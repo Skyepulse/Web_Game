@@ -29,7 +29,6 @@ function WaitingRoom() {
     }
 
     const startGame = () => {
-        console.log('BEFORE BEFORE USERS: ', users);
         if (ws.current && users.length > 1) {
             //We check that all users found a team SO no users has team 'none'
             if(users.find(user => user.team === 'none')) {
@@ -63,6 +62,7 @@ function WaitingRoom() {
             if(localStorage.getItem('LastRoomID') !== roomID) {
                 localStorage.clear();
                 localStorage.setItem('LastRoomID', roomID);
+                console.log('Redirecting to /join');
                 history('/join');
             }
             if(!localStorage.getItem('userName')) {
@@ -93,8 +93,8 @@ function WaitingRoom() {
                 history('/');
             } else if(response.type === 'startGame') {
                 const gameRoomID = response.gameRoomID;
-                console.log('BEFORE USERS: ', usersRef.current);
-                history(`/game/${gameRoomID}`, {state: {users: usersRef.current, gameRoomID: gameRoomID}});
+                const userID = localStorage.getItem('userID'); 
+                history(`/game/${gameRoomID}`, {state: {users: usersRef.current, gameRoomID: gameRoomID, userID: userID}});
             }
         };
 
