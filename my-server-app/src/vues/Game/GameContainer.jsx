@@ -14,6 +14,10 @@ function GameContainer(){
     const userID = useRef();
     const ws = useRef(null);
 
+    const startGame = () => {
+        console.log('Game Button pressed: ', phaserRef.current.scene);
+    }
+
     const loadGameSession = () => {
         const gameSessionData = location.state || JSON.parse(localStorage.getItem('gameSession'));
         if(!gameSessionData) {
@@ -75,7 +79,7 @@ function GameContainer(){
 
     return(
         <div className='gameApp'>
-            <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} />
+            <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} startGame = {startGame}/>
             <div className='gameAppNext'>
                 <div className='teamPoints'>
                     <div className='team' id = 'team1'>
@@ -111,5 +115,7 @@ function GameContainer(){
 const currentGameScene = (scene) => {
     console.log('Current Scene: ', scene.scene.key);
 }
+
+
 
 export default GameContainer;

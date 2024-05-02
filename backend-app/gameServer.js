@@ -15,7 +15,7 @@ class game {
     }
 };
 
-const games = {}; // Store all 
+const games = {};
 const leftUsers = {};
 
 wss.on('connection', (ws) =>{

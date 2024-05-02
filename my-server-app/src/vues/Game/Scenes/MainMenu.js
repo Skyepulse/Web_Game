@@ -3,7 +3,6 @@ import { Scene } from 'phaser';
 
 export class MainMenu extends Scene
 {
-    logotween;
 
     constructor()
     {
@@ -12,17 +11,22 @@ export class MainMenu extends Scene
 
     create()
     {
-        console.log('Main Menu scene loaded');
         this.add.image(512, 384, 'background');
 
         this.logo = this.add.image(512, 300, 'logo').setDepth(100);
 
-        this.add.text(512, 460, 'Main Menu', {
+        //EXAMPLE OF A BUTTON /////////////////////////////////
+        const startButton = this.add.text(512, 460, 'Start Game', {
             fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
             stroke: '#000000', strokeThickness: 8,
             align: 'center'
-        }).setDepth(100).setOrigin(0.5);
-        
+        }).setInteractive().setOrigin(0.5);
+        ///////////////////////////////////////////////////////
+
+        startButton.on('pointerdown', () => {
+            EventBus.emit('start-game');
+        });
+
         EventBus.emit('current-scene-ready', this);
     }
 
