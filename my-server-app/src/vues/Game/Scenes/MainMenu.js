@@ -1,33 +1,54 @@
 import { EventBus } from '../EventBus';
-import { Scene } from 'phaser';
+import { Scene, Math } from 'phaser';
 
 export class MainMenu extends Scene
 {
-
     constructor()
     {
         super('MainMenu');
+        this.screenX = 0;
+        this.screenY = 0;
+
+        //Main Circle
+        this.mainCircleContainer = null;
+        this.MAIN_CIRCLE_RADIUS = 300;
+        this.mainCircleGraphics = null;
+
+        //Cover Circle
+        this.coverCircleContainer = null;
+        this.COVER_CIRCLE_RADIUS = 300;
+        this.coverCircleGraphics = null;
+        
+        this.mouse = {mouseX: 0, mouseY: 0, rotation: 0};
     }
 
     create()
     {
-        this.add.image(512, 384, 'background');
+        this.screenX = this.registry.get('gameWidth');
+        this.screenY = this.registry.get('gameHeight');
+        
+        this.mainCircleGraphics = this.add.graphics();
+        this.mainCircleContainer = this.add.container(this.screenX/2, this.screenY/2);
+        this.mainCircleGraphics.fillStyle(0xffff00, 1);
+        this.mainCircleGraphics.fillCircle(0, 0, this.MAIN_CIRCLE_RADIUS);
+        this.mainCircleContainer.add(this.mainCircleGraphics);
 
-        this.logo = this.add.image(512, 300, 'logo').setDepth(100);
+        this.coverCircleGraphics = this.add.graphics();
+        this.coverCircleContainer = this.add.container(this.screenX/2, this.screenY/2);
+        this.coverCircleGraphics.fillStyle(0xff000f, 1);
+        this.coverCircleGraphics.slice(0,0, this.COVER_CIRCLE_RADIUS, Math.DegToRad(0), Math.DegToRad(180), true);
+        this.coverCircleGraphics.fillPath();
+        this.coverCircleContainer.add(this.coverCircleGraphics);
 
-        //EXAMPLE OF A BUTTON /////////////////////////////////
-        const startButton = this.add.text(512, 460, 'Start Game', {
-            fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
-            stroke: '#000000', strokeThickness: 8,
-            align: 'center'
-        }).setInteractive().setOrigin(0.5);
-        ///////////////////////////////////////////////////////
-
-        startButton.on('pointerdown', () => {
-            EventBus.emit('start-game');
+        this.input.on('pointermove', (pointer) => {
+            this.mouse = this.setMousePosition(pointer);
+            this.redrawCoverCirle();
         });
-
         EventBus.emit('current-scene-ready', this);
+    }
+
+    update(time, delta){
+        
     }
 
     changeScene ()
@@ -35,37 +56,28 @@ export class MainMenu extends Scene
         console.log('Changing scene TO THE SUPPOSED MAIN GAME SCENE');
     }
 
-    moveLogo (reactCallback)
+    setMousePosition(pointer)
     {
-        if (this.logoTween)
-        {
-            if (this.logoTween.isPlaying())
-            {
-                this.logoTween.pause();
-            }
-            else
-            {
-                this.logoTween.play();
-            }
+        let mouseX = pointer.x;
+        let mouseY = pointer.y;
+        let rotation = Math.Angle.Between(this.screenX/2, this.screenY/2, mouseX, mouseY);
+        return {mouseX: mouseX, mouseY: mouseY, rotation: rotation};
+    }
+
+    redrawCoverCirle(){
+        let degRotation = Math.RadToDeg(this.mouse.rotation);
+        let startAngle = 0;
+        let endAngle = 0;
+        if(degRotation > 0){
+            startAngle = Math.DegToRad(0);
+            endAngle = Math.DegToRad(180);
+        } else {
+            startAngle = Math.DegToRad(0 + degRotation);
+            endAngle = Math.DegToRad(180);
         }
-        else
-        {
-            this.logoTween = this.tweens.add({
-                targets: this.logo,
-                x: { value: 750, duration: 3000, ease: 'Back.easeInOut' },
-                y: { value: 80, duration: 1500, ease: 'Sine.easeOut' },
-                yoyo: true,
-                repeat: -1,
-                onUpdate: () => {
-                    if (reactCallback)
-                    {
-                        reactCallback({
-                            x: Math.floor(this.logo.x),
-                            y: Math.floor(this.logo.y)
-                        });
-                    }
-                }
-            });
-        }
+        this.coverCircleGraphics.clear();
+        this.coverCircleGraphics.fillStyle(0xff000f, 1);
+        this.coverCircleGraphics.slice(0,0, this.COVER_CIRCLE_RADIUS, startAngle, endAngle, true);
+        this.coverCircleGraphics.fillPath();
     }
 }

@@ -1,10 +1,12 @@
-import {forwardRef, useEffect, useLayoutEffect, useRef} from 'react';
+import {forwardRef, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import StartGame from './main';
 import { EventBus } from './EventBus';
 
 export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, startGame}, ref)
 {
     const game = useRef();
+    const [gameHeight, setGameHeight] = useState(0);
+    const [gameWidth, setGameWidth] = useState(0);
 
     //We create the game inside a useLayoutEffect hook to make sure the game is created only once in the DOM
     useLayoutEffect(()=>{
@@ -12,6 +14,11 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, st
         if(game.current === undefined)
         {
             game.current = StartGame("gameContainer");
+            const configs = game.current.config;
+            setGameHeight(configs.height);
+            setGameWidth(configs.width);
+            console.log('Game created with: ', gameHeight, gameWidth);
+
             if(ref !== null)
             {
                 ref.current = {game: game.current, scene: null};
@@ -25,7 +32,7 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, st
                 game.current = undefined;
             }
         }
-    },[ref]);
+    },[ref, gameHeight, gameWidth]);
 
     useEffect(() => {
         EventBus.on('current-scene-ready', (currentScene) => {

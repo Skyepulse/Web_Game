@@ -9,11 +9,14 @@ const config = {
     type: Phaser.AUTO,
     width: 1024,
     height: 768,
+    input: {
+        mouse : true,
+    },
     scale: {
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
     parent: 'gameContainer',
-    backgroundColor: '#028af8',
+    backgroundColor: '#c1a7a7',
     scene: [
         Boot,
         Preloader,

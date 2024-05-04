@@ -14,6 +14,8 @@ export class Boot extends Scene {
 
     create()
     {
+        this.game.registry.set('gameWidth', this.game.config.width);
+        this.game.registry.set('gameHeight', this.game.config.height);
         this.scene.start('Preloader');
     }
 }
