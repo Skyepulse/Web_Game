@@ -12,6 +12,59 @@ class game {
         this.roomID = roomID;
         this.gameRoomID = gameRoomID;
         this.users = users;
+        this.redUsers = [];
+        this.blueUsers = [];
+        this.hasStarted = false;
+
+        users.forEach((user) => {
+            if(user.team === 'red') {
+                this.redUsers.push(user);
+            }
+            if(user.team === 'blue') {
+                this.blueUsers.push(user);
+            }
+        });
+
+        this.currentRedPlayerIndex = 0;
+        this.currentBluePlayerIndex = 0;
+        this.blueNumPlayers = this.blueUsers.length;
+        this.redNumPlayers = this.redUsers.length;
+        this.currentTeam = null;
+    }
+
+    selectRandomTeam() {
+        //Select "blue" or "red" randomly
+        this.currentTeam = Math.random() < 0.5 ? 'red' : 'blue';
+    }
+
+    initializeGame() {
+        this.hasStarted = true;
+        this.selectRandomTeam();
+        this.readyPlayer();
+    }
+
+    readyPlayer(){
+        if(this.currentTeam === 'red') {
+            this.redUsers[this.currentRedPlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            this.redUsers[this.currentRedPlayerIndex].master = true;
+        } else {
+            this.blueUsers[this.currentBluePlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            this.blueUsers[this.currentBluePlayerIndex].master = true;
+        }
+        broadCastUsers(this.gameRoomID);
+    }
+
+    nextTurn() {
+        if(this.currentTeam === 'red') {
+            this.redUsers[this.currentRedPlayerIndex].master = false;
+            this.currentRedPlayerIndex = (this.currentRedPlayerIndex + 1) % this.redNumPlayers;
+        } else {
+            this.blueUsers[this.currentBluePlayerIndex].master = false;
+            this.currentBluePlayerIndex = (this.currentBluePlayerIndex + 1) % this.blueNumPlayers;
+        }
+
+        this.currentTeam = this.currentTeam === 'red' ? 'blue' : 'red';
+        this.readyPlayer();
     }
 };
 
@@ -30,11 +83,25 @@ wss.on('connection', (ws) =>{
                 //iterate through all users and set their ws to null for now
                 users.forEach((user) => {
                     user.ws = null;
+                    user.master = false;
                 });
 
                 const newGame = new game(roomID, gameRoomID, users);
                 games[gameRoomID] = newGame;
                 sendStartGameResponse(gameRoomID, roomID);
+            }
+
+            if(data.type === 'nextTurn') {
+                const gameRoomID = data.gameRoomID;
+                const game = games[gameRoomID];
+                if(!game) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+                    return;
+                }
+                let user = game.users.find(user => user.ws === ws);
+                if(user.master){
+                    game.nextTurn();
+                } 
             }
 
             if(data.type == 'userJoin'){
@@ -62,6 +129,11 @@ wss.on('connection', (ws) =>{
                     }
                 }
                 broadCastUsers(gameRoomID);
+
+                //We check if all users have joined (none have ws as null)
+                if(game.users.every(user => user.ws !== null) && !game.hasStarted){
+                    game.initializeGame();
+                }
             }
 
         } catch (error) {

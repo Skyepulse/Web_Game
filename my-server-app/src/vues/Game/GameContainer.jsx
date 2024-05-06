@@ -14,10 +14,6 @@ function GameContainer(){
     const userID = useRef();
     const ws = useRef(null);
 
-    const startGame = () => {
-        console.log('Game Button pressed: ', phaserRef.current.scene);
-    }
-
     const loadGameSession = () => {
         const gameSessionData = location.state || JSON.parse(localStorage.getItem('gameSession'));
         if(!gameSessionData) {
@@ -30,6 +26,18 @@ function GameContainer(){
             localStorage.setItem('gameSession', JSON.stringify(gameSessionData));
         }
     };
+
+    const sendServerMessage = (message) => {
+        if(ws.current.readyState === WebSocket.OPEN) {
+            if(message.type === 'nextTurn') {
+                ws.current.send(JSON.stringify({
+                    type: 'nextTurn',
+                    gameRoomID: gameRoomID.current
+                }));
+                console.log('Next turn message sent');
+            }
+        }
+    }
 
     useEffect(loadGameSession, [location.state, history]);
 
@@ -58,6 +66,9 @@ function GameContainer(){
                     if(response.leftUsers.length > 0) setLeftUsers(response.leftUsers);
                     else setLeftUsers([]);
                 }
+                if(response.type === 'yourTurn') {
+                    console.log('Your turn');
+                }
                 if(response.type === 'error') {
                     console.error(response.message);
                     alert(response.message);
@@ -79,17 +90,17 @@ function GameContainer(){
 
     return(
         <div className='gameApp'>
-            <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} startGame = {startGame}/>
+            <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} sendServerMessage = {sendServerMessage}/>
             <div className='gameAppNext'>
                 <div className='teamPoints'>
                     <div className='team' id = 'team1'>
                         <h2>Team Blue</h2>
                         <ol className='teamlist' id = 'team1list'>
                             {users.filter(user => user.team === 'blue').map(user => (
-                                <li className = 'teamNameListElement' key={user.id}><span>{user.name}</span></li>
+                                <li className = 'teamNameListElement' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                             {leftUsers.filter(user => user.team === 'blue').map(user => (
-                                <li className = 'teamNameListElementLeft' key={user.id}><span>{user.name}</span></li>
+                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                         </ol>
                         <h3>Points: 0</h3>
@@ -98,10 +109,10 @@ function GameContainer(){
                         <h2>Team Red</h2>
                         <ol className='teamlist' id = 'team2list'>
                             {users.filter(user => user.team === 'red').map(user => (
-                                <li className = 'teamNameListElement' key={user.id}><span>{user.name}</span></li>
+                                <li className = 'teamNameListElement' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                             {leftUsers.filter(user => user.team === 'red').map(user => (
-                                <li className = 'teamNameListElementLeft' key={user.id}><span>{user.name}</span></li>
+                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                         </ol>
                         <h3>Points: 0</h3>

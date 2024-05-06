@@ -2,7 +2,7 @@ import {forwardRef, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import StartGame from './main';
 import { EventBus } from './EventBus';
 
-export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, startGame}, ref)
+export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, sendServerMessage}, ref)
 {
     const game = useRef();
     const [gameHeight, setGameHeight] = useState(0);
@@ -43,20 +43,20 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, st
             ref.current.scene = currentScene;
         });
 
-        EventBus.on('start-game', () => {
-            if(startGame instanceof Function)
+        EventBus.on('send-server-message', (message) => {
+            if(sendServerMessage instanceof Function)
             {
-                startGame();
-            
+                console.log('Sending message from game: ', message);
+                sendServerMessage(message);
             }
         });
 
         return () => {
             EventBus.off('current-scene-ready');
-            EventBus.off('start-game');
+            EventBus.off('send-server-message');
         }
 
-    }, [currentActiveScene, startGame, ref]);
+    }, [currentActiveScene, sendServerMessage, ref]);
 
 
 
