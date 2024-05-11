@@ -8,13 +8,15 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 class game {
-    constructor(roomID, gameRoomID, users) {
+    constructor(roomID, gameRoomID, users, gameType) {
         this.roomID = roomID;
         this.gameRoomID = gameRoomID;
         this.users = users;
         this.redUsers = [];
         this.blueUsers = [];
         this.hasStarted = false;
+        this.redScore = 0;
+        this.blueScore = 0;
 
         users.forEach((user) => {
             if(user.team === 'red') {
@@ -66,6 +68,30 @@ class game {
         this.currentTeam = this.currentTeam === 'red' ? 'blue' : 'red';
         this.readyPlayer();
     }
+
+    winPoints(team, points) {
+        if(team === 'red') {
+            this.redScore += points;
+            if(gameType == 'coop') this.blueScore += points;
+        } else {
+            this.blueScore += points;
+            if(gameType == 'coop') this.redScore += points;
+        }
+    }
+
+    guessTurn() {
+        if(this.currentTeam === 'red') {
+            let sameTeamNotMasterUsers = this.redUsers.filter(user => user.master === false);
+            sameTeamNotMasterUsers.forEach(user => {
+                user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
+            });
+        } else {
+            let sameTeamNotMasterUsers = this.blueUsers.filter(user => user.master === false);
+            sameTeamNotMasterUsers.forEach(user => {
+                user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
+            });
+        }
+    }
 };
 
 const games = {};
@@ -80,13 +106,14 @@ wss.on('connection', (ws) =>{
                 const gameRoomID = data.gameRoomID;
                 const roomID = data.roomID;
                 const users = data.users;
+                const gameType = data.gameType;
                 //iterate through all users and set their ws to null for now
                 users.forEach((user) => {
                     user.ws = null;
                     user.master = false;
                 });
 
-                const newGame = new game(roomID, gameRoomID, users);
+                const newGame = new game(roomID, gameRoomID, users, gameType);
                 games[gameRoomID] = newGame;
                 sendStartGameResponse(gameRoomID, roomID);
             }
@@ -102,6 +129,19 @@ wss.on('connection', (ws) =>{
                 if(user.master){
                     game.nextTurn();
                 } 
+            }
+
+            if(data.type === 'guessTurn'){
+                const gameRoomID = data.gameRoomID;
+                const game = games[gameRoomID];
+                if(!game) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+                    return;
+                }
+                let user = game.users.find(user => user.ws === ws);
+                if(user.master){
+                    game.guessTurn();
+                }
             }
 
             if(data.type == 'userJoin'){

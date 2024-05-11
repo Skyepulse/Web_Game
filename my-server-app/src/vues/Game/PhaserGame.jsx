@@ -17,7 +17,6 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, se
             const configs = game.current.config;
             setGameHeight(configs.height);
             setGameWidth(configs.width);
-            console.log('Game created with: ', gameHeight, gameWidth);
 
             if(ref !== null)
             {
@@ -51,9 +50,19 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, se
             }
         });
 
+        EventBus.on('your-turn', () => {
+            game.current.scene.scenes[2].showTurnButton();
+        });
+
+        EventBus.on('your-guess-turn', () => {
+            game.current.scene.scenes[2].showPicker();
+        });
+
         return () => {
             EventBus.off('current-scene-ready');
             EventBus.off('send-server-message');
+            EventBus.off('your-turn');
+            EventBus.off('your-guess-turn');
         }
 
     }, [currentActiveScene, sendServerMessage, ref]);

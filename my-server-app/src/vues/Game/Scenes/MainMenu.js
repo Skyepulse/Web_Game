@@ -1,5 +1,5 @@
 import { EventBus } from '../EventBus';
-import { Scene, Math } from 'phaser';
+import { Scene, Math, Geom } from 'phaser';
 
 export class MainMenu extends Scene
 {
@@ -38,7 +38,17 @@ export class MainMenu extends Scene
         this.PICKER_BASE = 50;
         this.PICKER_HEIGHT = 50;
         this.PICKER_BASE_RADIUS = 340;
-        this.pickerVisible = true;
+        this.pickerVisible = false;
+
+        //Turn Button
+        this.turnButtonContainer = null;
+        this.turnButtonBackground = null;
+        this.turnButtonText = null;
+        this.visibleTurnButton = false;
+
+        //Look Information Master
+        this.lookAtMasterTime = 3; //Seconds
+        this.lookAtMasterTimer = 0;
         
         this.mouse = {mouseX: 0, mouseY: 0, rotation: 0};
     }
@@ -88,6 +98,20 @@ export class MainMenu extends Scene
         this.pickerGraphics.fillStyle(0x000000, 1);
         this.pickerGraphics.fillTriangle(this.PICKER_BASE/2, this.PICKER_BASE_RADIUS, -this.PICKER_BASE/2, this.PICKER_BASE_RADIUS, 0, this.PICKER_BASE_RADIUS - this.PICKER_HEIGHT);
         this.pickerContainer.add(this.pickerGraphics);
+        this.pickerContainer.visible = this.pickerVisible;
+
+        this.turnButtonContainer = this.add.container(this.screenX/2, this.screenY/2);
+        this.turnButtonBackground = this.add.graphics();
+        this.turnButtonBackground.fillStyle(0x000000, 1);
+        this.turnButtonBackground.fillRoundedRect(-100, -50, 200, 100, 20);
+        this.turnButtonContainer.add(this.turnButtonBackground);
+        this.turnButtonText = this.add.text(0, 0, 'Your Turn', {fontFamily: 'Arial', fontSize: 24, color: '#ffffff'});
+        this.turnButtonText.setOrigin(0.5);
+        this.turnButtonContainer.add(this.turnButtonText);
+        this.turnButtonContainer.setSize(200, 100);
+        this.turnButtonContainer.setInteractive(new Geom.Rectangle(0, 0, 200, 100), Geom.Rectangle.Contains)
+            .on('pointerdown', () => this.onClickTurnButton());
+        this.turnButtonContainer.visible = this.visibleTurnButton;
 
 
         this.input.on('pointermove', (pointer) => {
@@ -95,20 +119,21 @@ export class MainMenu extends Scene
             this.movePicker();
         });
         this.input.on('pointerdown', (pointer) => {
-            EventBus.emit('send-server-message', {type: 'nextTurn'});
+            //Picker Click
+            if(this.pickerVisible){
+                console.log('Picker Clicked at', this.mouse.rotation);
+            }
+        });
 
-            let success = -1;
-            if(this.isCoverOpen) success = this.closeCoverCircle();
-            else  success = this.openCoverCircle();
-            if(success < 0) return;
-
-            this.isCoverOpen = !this.isCoverOpen;
-        
-            if(this.isCoverOpen) this.goalAngle = this.MIN_ANGLE;
-            else this.goalAngle = this.MAX_ANGLE;
+        this.events.on('your-turn', () => {
+            this.showTurnButton();
         });
 
         EventBus.emit('current-scene-ready', this);
+    }
+
+    destroy(){
+        this.events.off('your-turn');
     }
 
     update(time, delta){
@@ -126,6 +151,16 @@ export class MainMenu extends Scene
                     break;
                 default:
                     break;
+            }
+        }
+
+        //Update Look Information Master
+        if(this.lookAtMasterTimer > 0){
+            this.lookAtMasterTimer -= delta;
+            if(this.lookAtMasterTimer <= 0) this.lookAtMasterTimer = 0;
+            if(this.lookAtMasterTimer === 0){
+                this.changeCoverCircle();
+                EventBus.emit('send-server-message', {type: 'guessTurn'});
             }
         }
 
@@ -173,5 +208,51 @@ export class MainMenu extends Scene
     movePickerToAngle(degRotation){
         if(!this.pickerVisible) return;
         this.pickerContainer.rotation = degRotation <= 0 ? degRotation  - Math.DegToRad(90): Math.DegToRad(180);
+    }
+
+    changeCoverCircle(){
+        let success = -1;
+        if(this.isCoverOpen) success = this.closeCoverCircle();
+        else  success = this.openCoverCircle();
+        if(success < 0) return;
+
+        this.isCoverOpen = !this.isCoverOpen;
+    
+        if(this.isCoverOpen) this.goalAngle = this.MIN_ANGLE;
+        else this.goalAngle = this.MAX_ANGLE;
+    }
+
+    showTurnButton(){
+        if(this.turnButton == null){
+            this.visibleTurnButton = true;
+            return;
+        }
+        this.turnButtonContainer.visible = true;
+        this.visibleTurnButton = true;
+    }
+
+    hidePicker(){
+        this.pickerContainer.visible = false;
+        this.pickerVisible = false;
+    }
+
+    showPicker(){
+        this.pickerContainer.visible = true;
+        this.pickerVisible = true;
+    }
+
+    hideTurnButton(){
+        this.turnButtonContainer.visible = false;
+        this.visibleTurnButton = false;
+    }
+
+    onClickTurnButton(){
+        this.hideTurnButton();
+        this.masterTurnLookInformation();
+    }
+
+    masterTurnLookInformation(){
+        this.changeCoverCircle();
+        this.lookAtMasterTimer = this.lookAtMasterTime*1000;
     }
 }

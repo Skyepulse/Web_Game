@@ -1,6 +1,7 @@
 import {useRef, useState, useEffect} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {PhaserGame} from './PhaserGame';
+import {EventBus} from './EventBus';
 
 
 
@@ -34,7 +35,12 @@ function GameContainer(){
                     type: 'nextTurn',
                     gameRoomID: gameRoomID.current
                 }));
-                console.log('Next turn message sent');
+            }
+            if(message.type === 'guessTurn'){
+                ws.current.send(JSON.stringify({
+                    type: 'guessTurn',
+                    gameRoomID: gameRoomID.current,
+                }));
             }
         }
     }
@@ -67,7 +73,11 @@ function GameContainer(){
                     else setLeftUsers([]);
                 }
                 if(response.type === 'yourTurn') {
-                    console.log('Your turn');
+                    EventBus.emit('your-turn');
+                }
+                if(response.type === 'yourGuessTurn'){
+                    console.log('Your guess turn');
+                    EventBus.emit('your-guess-turn');
                 }
                 if(response.type === 'error') {
                     console.error(response.message);
@@ -90,7 +100,13 @@ function GameContainer(){
 
     return(
         <div className='gameApp'>
-            <PhaserGame currentActiveScene={currentGameScene} ref={phaserRef} sendServerMessage = {sendServerMessage}/>
+            <PhaserGame 
+                ref={phaserRef} 
+                //PASSED DOWN METHODS//
+                currentActiveScene={currentGameScene} 
+                sendServerMessage = {sendServerMessage}
+                ///////////////////////
+            />
             <div className='gameAppNext'>
                 <div className='teamPoints'>
                     <div className='team' id = 'team1'>
@@ -124,7 +140,7 @@ function GameContainer(){
 }
 
 const currentGameScene = (scene) => {
-    console.log('Current Scene: ', scene.scene.key);
+    //console.log('Current Scene: ', scene.scene.key);
 }
 
 

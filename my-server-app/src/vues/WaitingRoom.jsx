@@ -35,6 +35,11 @@ function WaitingRoom() {
                 alert('Some users have not chosen a team yet');
                 return;
             }
+            //We check each team has at least one player
+            if(users.filter(user => user.team === 'red').length < 1 || users.filter(user => user.team === 'blue').length < 1) {
+                alert('Each team must have at least one player');
+                return;
+            }
             const me = users.find(user => user.id === localStorage.getItem('userID'));
             if(me.master) {
                 ws.current.send(JSON.stringify({ type: 'startGame', roomID: roomID }));

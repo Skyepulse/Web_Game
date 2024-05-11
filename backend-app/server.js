@@ -145,6 +145,8 @@ function broadcastStartGame(roomID) {
     const room = rooms[roomID];
     if(!room) return;
     const gameRoomID = roomID + '-game';
+    const gameType = room.users.length >= 4 ? 'against' : 'coop'; 
+    console.log('Starting game type', gameType);
 
     const gameServerWs = new WebSocket('ws://localhost:4001');
     gameServerWs.onopen = () => {
@@ -152,7 +154,8 @@ function broadcastStartGame(roomID) {
             type: 'initializeGame',
             roomID: roomID,
             gameRoomID: gameRoomID,
-            users: room.users
+            users: room.users,
+            gameType: gameType
         }));
         gameServerWs.close();
     };
