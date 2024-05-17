@@ -15,6 +15,7 @@ function GameContainer(){
     const history = useNavigate();
     const userID = useRef();
     const ws = useRef(null);
+    const [cardTexts, setCardTexts] = useState({text1: 'Default', text2: 'Default'});
 
     const loadGameSession = () => {
         const gameSessionData = location.state || JSON.parse(localStorage.getItem('gameSession'));
@@ -102,6 +103,10 @@ function GameContainer(){
                 if(response.type === 'revealScore'){
                     EventBus.emit('reveal-score', response);
                 }
+                if(response.type === 'newCard'){
+                    setCardTexts(response.cardTexts);
+                    console.log('New card texts: ', response.cardTexts);
+                }
             } catch (error) {
                 console.error('Error parsing message: ', error);
             }
@@ -150,6 +155,14 @@ function GameContainer(){
                             ))}
                         </ol>
                         <h3>Points: {scores.red}</h3>
+                    </div>
+                </div>
+                <div className='cardTexts'>
+                    <h2>Card Texts</h2>
+                    <div className='cardText'>
+                        <div className = 'cardT' id = 't1'>{cardTexts.text1}</div>
+                        <div className = 'lineSeparator'></div>
+                        <div className = 'cardT' id = 't2'>{cardTexts.text2}</div>
                     </div>
                 </div>
             </div>

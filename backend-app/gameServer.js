@@ -17,6 +17,11 @@ class game {
         this.hasStarted = false;
         this.redScore = 0;
         this.blueScore = 0;
+        this.cardsManager = new CardsManager();
+
+        this.buildCardsManager('./cards.txt');
+
+
 
         this.currentMainCircleRotation = 0;
         this.POINTS_RADIUS = 45;
@@ -37,6 +42,16 @@ class game {
         this.currentTeam = null;
     }
 
+    buildCardsManager(cardsFilePath){
+        const fs = require('fs');
+        const cards = fs.readFileSync(cardsFilePath, 'utf8').split('\n');
+        cards.forEach(card => {
+            const [t1, t2] = card.split(',').map(t => t.trim());
+            if(t1 && t2) this.cardsManager.addCard(new Card(t1, t2));
+        });
+        console.log('CardsManager built with ', this.cardsManager.getNumberOfCards(), ' cards');
+    }
+
     selectRandomTeam() {
         //Select "blue" or "red" randomly
         this.currentTeam = Math.random() < 0.5 ? 'red' : 'blue';
@@ -49,6 +64,9 @@ class game {
     }
 
     readyPlayer(){
+        let randomCard = this.cardsManager.getRandomCard();
+        broadCastNewCard(this.gameRoomID, randomCard.text1, randomCard.text2);
+
         if(this.currentTeam === 'red') {
             this.redUsers[this.currentRedPlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
             console.log('sent your turn to red player: ', this.redUsers[this.currentRedPlayerIndex].name);
@@ -284,5 +302,72 @@ broadCastUsers = (gameRoomID) => {
     });
 }
 
+broadCastNewCard = (gameRoomID, text1, text2) => {
+    const game = games[gameRoomID];
+    if(!game) return;
+
+    game.users.forEach(({ ws }) => {
+        if(ws == null) return;
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'newCard',
+                cardTexts: { text1: text1, text2: text2 }
+            }));
+        }
+    });
+    console.log('New card broadcasted with texts: ', text1, text2);
+}
+
 const PORT = process.env.PORT || 4001;
 server.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
+class CardsManager{
+    constructor(){
+        this.cards = [];
+    }
+
+    addCard(card){
+        this.cards.push(card);
+        this.updateWeights();
+    }
+
+    updateWeights(){
+        const totalSelections = this.cards.reduce((acc, card) => acc + card.chosenCount, 0);
+        const baseWeight = totalSelections > 0 ? 1 / (totalSelections + this.cards.length): this.cards.length;
+
+        this.cards.forEach(card => {
+            card.weight = baseWeight / (card.chosenCount + 1);
+        });
+
+        const totalWeight = this.cards.reduce((acc, card) => acc + card.weight, 0);
+        this.cards.forEach(card => {
+            card.weight /= totalWeight;
+        });
+    }
+
+    getRandomCard(){
+        const rand = Math.random();
+        let cumWeight = 0;
+
+        for(const card of this.cards){
+            cumWeight += card.weight;
+            if(rand <= cumWeight){
+                card.chosenCount++;
+                this.updateWeights();
+                return card;
+            }
+        }
+    }
+
+    getNumberOfCards(){
+        return this.cards.length;
+    }
+}
+
+class Card{
+    constructor(text1, text2){
+        this.text1 = text1;
+        this.text2 = text2;
+        this.chosenCount = 0;
+    }
+}

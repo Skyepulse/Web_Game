@@ -1,4 +1,5 @@
 import { EventBus } from '../EventBus';
+import { EventTimer, EventTimerManager } from '../EventTimer';
 import { Scene, Math, Geom } from 'phaser';
 
 export class MainMenu extends Scene
@@ -10,6 +11,9 @@ export class MainMenu extends Scene
         this.screenY = 0;
 
         this.currentMaster = false;
+
+        //Event Timer Manager
+        this.eventTimerManager = new EventTimerManager();
 
         //Main Circle
         this.mainCircleContainer = null;
@@ -176,7 +180,10 @@ export class MainMenu extends Scene
             }
         }
 
+        this.eventTimerManager.update(delta);
+
         //Update Look Information Master
+        /*
         if(this.lookAtMasterTimer > 0){
             this.lookAtMasterTimer -= delta;
             if(this.lookAtMasterTimer <= 0) this.lookAtMasterTimer = 0;
@@ -185,8 +192,10 @@ export class MainMenu extends Scene
                 EventBus.emit('send-server-message', {type: 'guessTurn', mainCircleRotation: this.mainCircleContainer.rotation, pointsRadius: this.POINT_RADIUS});
             }
         }
+        */
 
         //Update Look Information Reveal
+        /*
         if(this.lookAtRevealTimer > 0){
             this.lookAtRevealTimer -= delta;
             if(this.lookAtRevealTimer <= 0) this.lookAtRevealTimer = 0;
@@ -200,6 +209,7 @@ export class MainMenu extends Scene
                 }
             }
         }
+        */
     }
 
     changeScene ()
@@ -315,6 +325,11 @@ export class MainMenu extends Scene
         let randomRotation = Math.DegToRad(Math.Between(0, 180));
         this.mainCircleContainer.rotation = randomRotation;
         this.changeCoverCircle();
+
+        this.eventTimerManager.addTimer(new EventTimer(this.lookAtMasterTime*1000, () => {
+            this.changeCoverCircle();
+            EventBus.emit('send-server-message', {type: 'guessTurn', mainCircleRotation: this.mainCircleContainer.rotation, pointsRadius: this.POINT_RADIUS});
+        }));
         this.lookAtMasterTimer = this.lookAtMasterTime*1000;
     }
 
@@ -335,7 +350,16 @@ export class MainMenu extends Scene
         this.showPickerReveal();
         this.changeCoverCircle();
         this.showText('Score: ' + score + ' Team: ' + team, team === 'red' ? '#ff0000' : '#0000ff');
-        this.lookAtRevealTimer = this.lookAtRevealTime*1000;
+        
+        this.eventTimerManager.addTimer(new EventTimer(this.lookAtRevealTime*1000, () => {
+            this.hidePickerReveal();
+            this.changeCoverCircle();
+            this.hideText();
+            if(this.currentMaster){
+                EventBus.emit('send-server-message', {type: 'nextTurn'});
+                this.currentMaster = false;
+            }
+        }));
 
     }
 
