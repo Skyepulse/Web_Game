@@ -9,6 +9,8 @@ export class MainMenu extends Scene
         this.screenX = 0;
         this.screenY = 0;
 
+        this.currentMaster = false;
+
         //Main Circle
         this.mainCircleContainer = null;
         this.MAIN_CIRCLE_RADIUS = 300;
@@ -39,6 +41,8 @@ export class MainMenu extends Scene
         this.PICKER_HEIGHT = 50;
         this.PICKER_BASE_RADIUS = 340;
         this.pickerVisible = false;
+        this.pickerClickable = false;
+        this.pickerMoveable = false;
 
         //Turn Button
         this.turnButtonContainer = null;
@@ -49,6 +53,15 @@ export class MainMenu extends Scene
         //Look Information Master
         this.lookAtMasterTime = 3; //Seconds
         this.lookAtMasterTimer = 0;
+        
+        //Look Information Reveal
+        this.lookAtRevealTime = 5; //Seconds
+        this.lookAtRevealTimer = 0;
+
+        //Show text
+        this.textContainer = null;
+        this.text = null;
+        this.textVisible = false;
         
         this.mouse = {mouseX: 0, mouseY: 0, rotation: 0};
     }
@@ -111,17 +124,26 @@ export class MainMenu extends Scene
         this.turnButtonContainer.setSize(200, 100);
         this.turnButtonContainer.setInteractive(new Geom.Rectangle(0, 0, 200, 100), Geom.Rectangle.Contains)
             .on('pointerdown', () => this.onClickTurnButton());
+        console.log('Visible Turn Button:', this.visibleTurnButton);
         this.turnButtonContainer.visible = this.visibleTurnButton;
+
+        this.textContainer = this.add.container(this.screenX/2, this.screenY/2);
+        this.text = this.add.text(0, 0, '', {fontFamily: 'Arial', fontSize: 24, color: '#ffffff'});
+        this.textContainer.add(this.text);
+        this.textContainer.visible = this.textVisible;
 
 
         this.input.on('pointermove', (pointer) => {
             this.mouse = this.setMousePosition(pointer);
-            this.movePicker();
+            if(this.pickerMoveable) this.movePicker();
         });
         this.input.on('pointerdown', (pointer) => {
             //Picker Click
-            if(this.pickerVisible){
-                console.log('Picker Clicked at', this.mouse.rotation);
+            if(this.pickerVisible && this.pickerClickable){
+                let rotationChosen = this.mouse.rotation;
+                if(rotationChosen <= 0  && rotationChosen >= -Math.PI2 / 2){
+                    this.choiceMade(rotationChosen);
+                }
             }
         });
 
@@ -160,10 +182,24 @@ export class MainMenu extends Scene
             if(this.lookAtMasterTimer <= 0) this.lookAtMasterTimer = 0;
             if(this.lookAtMasterTimer === 0){
                 this.changeCoverCircle();
-                EventBus.emit('send-server-message', {type: 'guessTurn'});
+                EventBus.emit('send-server-message', {type: 'guessTurn', mainCircleRotation: this.mainCircleContainer.rotation, pointsRadius: this.POINT_RADIUS});
             }
         }
 
+        //Update Look Information Reveal
+        if(this.lookAtRevealTimer > 0){
+            this.lookAtRevealTimer -= delta;
+            if(this.lookAtRevealTimer <= 0) this.lookAtRevealTimer = 0;
+            if(this.lookAtRevealTimer === 0){
+                this.hidePickerReveal();
+                this.changeCoverCircle();
+                this.hideText();
+                if(this.currentMaster){
+                    EventBus.emit('send-server-message', {type: 'nextTurn'});
+                    this.currentMaster = false;
+                }
+            }
+        }
     }
 
     changeScene ()
@@ -223,7 +259,7 @@ export class MainMenu extends Scene
     }
 
     showTurnButton(){
-        if(this.turnButton == null){
+        if(this.turnButtonContainer == null){
             this.visibleTurnButton = true;
             return;
         }
@@ -234,11 +270,31 @@ export class MainMenu extends Scene
     hidePicker(){
         this.pickerContainer.visible = false;
         this.pickerVisible = false;
+        this.pickerClickable = false;
+        this.pickerMoveable = false;
     }
 
     showPicker(){
+        console.log('Showing picker');
         this.pickerContainer.visible = true;
         this.pickerVisible = true;
+        this.pickerClickable = true;
+        this.pickerMoveable = true;
+        console.log('Picker visible:', this.pickerVisible);
+    }
+
+    showPickerReveal(){
+        this.pickerContainer.visible = true;
+        this.pickerVisible = true;
+        this.pickerClickable = false;
+        this.pickerMoveable = false;
+    }
+
+    hidePickerReveal(){
+        this.pickerContainer.visible = false;
+        this.pickerVisible = false;
+        this.pickerClickable = false;
+        this.pickerMoveable = false;
     }
 
     hideTurnButton(){
@@ -252,7 +308,46 @@ export class MainMenu extends Scene
     }
 
     masterTurnLookInformation(){
+        //We choose a random rotation for the main circle.
+        //we know that the main circle points at rotation = 0 --> max points at 90.
+        //We choose a random rotation between 0 and 180.
+        this.currentMaster = true;
+        let randomRotation = Math.DegToRad(Math.Between(0, 180));
+        this.mainCircleContainer.rotation = randomRotation;
         this.changeCoverCircle();
         this.lookAtMasterTimer = this.lookAtMasterTime*1000;
+    }
+
+
+    choiceMade(rotation){
+        this.hidePicker();
+        EventBus.emit('send-server-message', {type: 'userGuess', guessRotation: -rotation});
+    }
+
+    revealScore(response){
+        let mainCircleRotation = response.mainCircleRotation;
+        let guessRotation = response.guessRotation;
+        let score = response.score;
+        let team = response.team;
+
+        this.mainCircleContainer.rotation = mainCircleRotation;
+        this.movePickerToAngle(-guessRotation);
+        this.showPickerReveal();
+        this.changeCoverCircle();
+        this.showText('Score: ' + score + ' Team: ' + team, team === 'red' ? '#ff0000' : '#0000ff');
+        this.lookAtRevealTimer = this.lookAtRevealTime*1000;
+
+    }
+
+    showText(text, color){
+        this.text.setText(text);
+        this.text.setColor(color);
+        this.textContainer.visible = true;
+        this.textVisible = true;
+    }
+
+    hideText(){
+        this.textContainer.visible = false;
+        this.textVisible = false;
     }
 }

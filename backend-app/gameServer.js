@@ -18,6 +18,9 @@ class game {
         this.redScore = 0;
         this.blueScore = 0;
 
+        this.currentMainCircleRotation = 0;
+        this.POINTS_RADIUS = 45;
+
         users.forEach((user) => {
             if(user.team === 'red') {
                 this.redUsers.push(user);
@@ -48,9 +51,11 @@ class game {
     readyPlayer(){
         if(this.currentTeam === 'red') {
             this.redUsers[this.currentRedPlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            console.log('sent your turn to red player: ', this.redUsers[this.currentRedPlayerIndex].name);
             this.redUsers[this.currentRedPlayerIndex].master = true;
         } else {
             this.blueUsers[this.currentBluePlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            console.log('sent your turn to blue player: ', this.blueUsers[this.currentBluePlayerIndex].name);
             this.blueUsers[this.currentBluePlayerIndex].master = true;
         }
         broadCastUsers(this.gameRoomID);
@@ -69,17 +74,23 @@ class game {
         this.readyPlayer();
     }
 
-    winPoints(team, points) {
+    winPoints(team, points, mainCircleRotation, guessRotation) {
+        console.log('team: ', team, " points: ", points);
         if(team === 'red') {
             this.redScore += points;
-            if(gameType == 'coop') this.blueScore += points;
         } else {
             this.blueScore += points;
-            if(gameType == 'coop') this.redScore += points;
         }
+        //We send to all users the new scores
+        this.users.forEach(user => {
+            user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore }}));
+            user.ws.send(JSON.stringify({ type: 'revealScore', score: points, team: team , mainCircleRotation: mainCircleRotation, guessRotation: guessRotation}));
+        });
     }
 
-    guessTurn() {
+    guessTurn(mainCircleRotation, POINTS_RADIUS) {
+        this.currentMainCircleRotation = mainCircleRotation;
+        this.POINTS_RADIUS = POINTS_RADIUS;
         if(this.currentTeam === 'red') {
             let sameTeamNotMasterUsers = this.redUsers.filter(user => user.master === false);
             sameTeamNotMasterUsers.forEach(user => {
@@ -90,6 +101,38 @@ class game {
             sameTeamNotMasterUsers.forEach(user => {
                 user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
             });
+        }
+    }
+
+    userGuess(guessRotation) {
+        let trueMainCircleRotation = 90 - this.currentMainCircleRotation*180/Math.PI;
+        let secondMainCircleRotation = trueMainCircleRotation + 180;
+        if(secondMainCircleRotation > 360) secondMainCircleRotation -= 360;
+        let threePointsRadius = (1/12)*this.POINTS_RADIUS;
+        let twoPointsRadius = (1.5/6)*this.POINTS_RADIUS;
+        let onePointRadius = this.POINTS_RADIUS/2;
+
+        console.log('trueMainCircleRotation: ', trueMainCircleRotation);
+        console.log('secondMainCircleRotation: ', secondMainCircleRotation);
+        
+        guessRotation = guessRotation*180/Math.PI;
+        console.log('guessRotation: ', guessRotation);
+
+        //We check if we have the three points. We know guessRotation is between 0 and 180:
+        if(trueMainCircleRotation - threePointsRadius <= guessRotation && guessRotation <= trueMainCircleRotation + threePointsRadius){
+            this.winPoints(this.currentTeam, 3, this.currentMainCircleRotation, guessRotation);
+        } else if(secondMainCircleRotation - threePointsRadius <= guessRotation && guessRotation <= secondMainCircleRotation + threePointsRadius){
+            this.winPoints(this.currentTeam, 3, this.currentMainCircleRotation, guessRotation);
+        } else if(trueMainCircleRotation - twoPointsRadius <= guessRotation && guessRotation <= trueMainCircleRotation + twoPointsRadius){
+            this.winPoints(this.currentTeam, 2, this.currentMainCircleRotation, guessRotation);
+        } else if(secondMainCircleRotation - twoPointsRadius <= guessRotation && guessRotation <= secondMainCircleRotation + twoPointsRadius){
+            this.winPoints(this.currentTeam, 2, this.currentMainCircleRotation, guessRotation);
+        } else if(trueMainCircleRotation - onePointRadius <= guessRotation && guessRotation <= trueMainCircleRotation + onePointRadius){
+            this.winPoints(this.currentTeam, 1, this.currentMainCircleRotation, guessRotation);
+        } else if(secondMainCircleRotation - onePointRadius <= guessRotation && guessRotation <= secondMainCircleRotation + onePointRadius){
+            this.winPoints(this.currentTeam, 1, this.currentMainCircleRotation, guessRotation);
+        } else {
+            this.winPoints(this.currentTeam === 'red' ? 'blue' : 'red', 1, this.currentMainCircleRotation, guessRotation);
         }
     }
 };
@@ -133,6 +176,8 @@ wss.on('connection', (ws) =>{
 
             if(data.type === 'guessTurn'){
                 const gameRoomID = data.gameRoomID;
+                const mainCircleRotation = data.mainCircleRotation;
+                const POINTS_RADIUS = data.pointsRadius;
                 const game = games[gameRoomID];
                 if(!game) {
                     ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
@@ -140,8 +185,19 @@ wss.on('connection', (ws) =>{
                 }
                 let user = game.users.find(user => user.ws === ws);
                 if(user.master){
-                    game.guessTurn();
+                    game.guessTurn(mainCircleRotation, POINTS_RADIUS);
                 }
+            }
+
+            if(data.type === 'userGuess'){
+                const gameRoomID = data.gameRoomID;
+                const guessRotation = data.guessRotation;
+                const game = games[gameRoomID];
+                if(!game) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+                    return;
+                }
+                game.userGuess(guessRotation);
             }
 
             if(data.type == 'userJoin'){

@@ -51,11 +51,17 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, se
         });
 
         EventBus.on('your-turn', () => {
+            console.log('Your turn on middle');
             game.current.scene.scenes[2].showTurnButton();
         });
 
         EventBus.on('your-guess-turn', () => {
+            console.log('Your guess turn on middle');
             game.current.scene.scenes[2].showPicker();
+        });
+
+        EventBus.on('reveal-score', (response) => {
+            game.current.scene.scenes[2].revealScore(response);
         });
 
         return () => {
@@ -63,6 +69,7 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, se
             EventBus.off('send-server-message');
             EventBus.off('your-turn');
             EventBus.off('your-guess-turn');
+            EventBus.off('reveal-score');
         }
 
     }, [currentActiveScene, sendServerMessage, ref]);

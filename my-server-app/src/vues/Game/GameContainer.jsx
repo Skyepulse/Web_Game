@@ -9,6 +9,7 @@ function GameContainer(){
     const phaserRef = useRef();
     const [users, setUsers] = useState([]);
     const [leftUsers, setLeftUsers] = useState([]); 
+    const [scores, setScores] = useState({red: 0, blue: 0});
     const gameRoomID = useRef();
     const location = useLocation();
     const history = useNavigate();
@@ -40,6 +41,15 @@ function GameContainer(){
                 ws.current.send(JSON.stringify({
                     type: 'guessTurn',
                     gameRoomID: gameRoomID.current,
+                    mainCircleRotation: message.mainCircleRotation,
+                    pointsRadius: message.pointsRadius
+                }));
+            }
+            if(message.type === 'userGuess'){
+                ws.current.send(JSON.stringify({
+                    type: 'userGuess',
+                    gameRoomID: gameRoomID.current,
+                    guessRotation: message.guessRotation
                 }));
             }
         }
@@ -73,6 +83,7 @@ function GameContainer(){
                     else setLeftUsers([]);
                 }
                 if(response.type === 'yourTurn') {
+                    console.log('Your turn received');
                     EventBus.emit('your-turn');
                 }
                 if(response.type === 'yourGuessTurn'){
@@ -83,6 +94,13 @@ function GameContainer(){
                     console.error(response.message);
                     alert(response.message);
                     history('/');
+                }
+                if(response.type === 'updateScores'){
+                    setScores(response.scores);
+                    console.log('Scores: ', response.scores); 
+                }
+                if(response.type === 'revealScore'){
+                    EventBus.emit('reveal-score', response);
                 }
             } catch (error) {
                 console.error('Error parsing message: ', error);
@@ -119,7 +137,7 @@ function GameContainer(){
                                 <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                         </ol>
-                        <h3>Points: 0</h3>
+                        <h3>Points: {scores.blue}</h3>
                     </div>
                     <div className='team' id = 'team2'>
                         <h2>Team Red</h2>
@@ -131,7 +149,7 @@ function GameContainer(){
                                 <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                         </ol>
-                        <h3>Points: 0</h3>
+                        <h3>Points: {scores.red}</h3>
                     </div>
                 </div>
             </div>
