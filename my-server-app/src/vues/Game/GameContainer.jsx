@@ -16,6 +16,7 @@ function GameContainer(){
     const userID = useRef();
     const ws = useRef(null);
     const [cardTexts, setCardTexts] = useState({text1: 'Default', text2: 'Default'});
+    const gameServerUrl = process.env.REACT_APP_GAMESERVER_URL.replace(/^http/, 'ws');
 
     const loadGameSession = () => {
         const gameSessionData = location.state || JSON.parse(localStorage.getItem('gameSession'));
@@ -59,7 +60,7 @@ function GameContainer(){
     useEffect(loadGameSession, [location.state, history]);
 
     useEffect(() => {
-        ws.current = new WebSocket('ws://localhost:4001');
+        ws.current = new WebSocket(gameServerUrl);
         ws.current.onopen = () => {
             function sendMessageOnReady(){
                 if(ws.current.readyState === WebSocket.OPEN) {
@@ -120,7 +121,7 @@ function GameContainer(){
             if(ws.current.readyState === 1)
                 ws.current.close();
         }
-    }, [location.state, history]);
+    }, [location.state, history, gameServerUrl]);
 
     return(
         <div className='gameApp'>

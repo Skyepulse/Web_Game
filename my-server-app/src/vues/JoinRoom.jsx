@@ -6,9 +6,10 @@ function JoinRoom() {
     const ws = useRef(null);
     let history = useNavigate();
     const canJoin = useRef(false);
+    const serverURL = process.env.REACT_APP_SERVER1_URL.replace(/^http/, 'ws');
 
     useEffect(() => {
-        ws.current = new WebSocket('ws://localhost:3001');
+        ws.current = new WebSocket(serverURL);
         
         ws.current.onopen = () => {
             if(!localStorage.getItem('LastRoomID')){

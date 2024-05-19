@@ -12,6 +12,8 @@ function WaitingRoom() {
     const ws = useRef(null);
     const usersRef = useRef(users);
 
+    const serverURL = process.env.REACT_APP_SERVER1_URL.replace(/^http/, 'ws');
+
     const joinTeam = (team) => {
         if (ws.current) {
             ws.current.send(JSON.stringify({ type: 'changeTeam', color: team, roomID: roomID}));
@@ -60,7 +62,7 @@ function WaitingRoom() {
 
     useEffect(() => {
         const userID = getOrCreateUserId();
-        ws.current = new WebSocket('ws://localhost:3001'); //Matches server.js
+        ws.current = new WebSocket(serverURL); //Matches server.js
 
         ws.current.onopen = () => {
             //We first check if we have entered this room before, if not we redirect to the main view
@@ -110,7 +112,7 @@ function WaitingRoom() {
             if(ws.current.readyState === 1)
                 ws.current.close();
         };
-    }, [roomID, history, location.state?.name, master]);
+    }, [roomID, history, location.state?.name, master, serverURL]);
 
     useEffect(() => {
         usersRef.current = users;

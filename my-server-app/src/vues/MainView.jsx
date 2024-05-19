@@ -6,9 +6,10 @@ function MainView() {
     const [master] = useState(true); //We will use this to determine if the user is the master of the room
     const ws = useRef(null);
     let history = useNavigate();
+    const serverURL = process.env.REACT_APP_SERVER1_URL.replace(/^http/, 'ws');
 
     useEffect(() => {
-        ws.current = new WebSocket('ws://localhost:3001'); //Matches server.js
+        ws.current = new WebSocket(serverURL); //Matches server.js
 
         ws.current.onopen = () => {
         };
