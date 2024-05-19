@@ -53,6 +53,7 @@ class game {
     }
 
     buildCardsManager(cardsFilePath){
+        /*
         const fs = require('fs');
         const cards = fs.readFileSync(cardsFilePath, 'utf8').split('\n');
         cards.forEach(card => {
@@ -60,6 +61,8 @@ class game {
             if(t1 && t2) this.cardsManager.addCard(new Card(t1, t2));
         });
         console.log('CardsManager built with ', this.cardsManager.getNumberOfCards(), ' cards');
+        */
+        this.cardsManager.addCard(new Card('jayjay', 'naynay'));
     }
 
     selectRandomTeam() {
