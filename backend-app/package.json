@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "concurrently \"node server/server.js\" \"node gameServer/gameServer.js\""
+    "start": "concurrently \"npm:start --prefix server\" \"npm:start --prefix gameServer\""
   },
   "keywords": [],
   "author": "",
