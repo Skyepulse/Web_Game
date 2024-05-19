@@ -39,7 +39,14 @@ function MainView() {
 
     const handlePlayClick = () => {
         if (name.trim()) { 
-            ws.current.send(JSON.stringify({ type: 'createRoom' }));
+            function sendMessageOnReady(){
+                if(ws.current.readyState === WebSocket.OPEN) {
+                    ws.current.send(JSON.stringify({ type: 'createRoom' }));
+                } else {
+                    setTimeout(sendMessageOnReady, 100);
+                }
+            }
+            sendMessageOnReady();
         } else {
             alert('Please enter a name before playing.');
         }
