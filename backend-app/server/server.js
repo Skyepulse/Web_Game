@@ -5,6 +5,9 @@ const http = require('http');
 const app = express();
 const server = http.createServer(app);
 
+const REACT_APP_SERVER1_URL= "https://my-backend-server1-610139900de0.herokuapp.com/"
+const REACT_APP_GAMESERVER_URL="https://my-backend-gameserver-c1e077ac9497.herokuapp.com/"
+
 const wss = new WebSocket.Server({ server });
 
 const rooms = {}; // Store all rooms
@@ -148,7 +151,8 @@ function broadcastStartGame(roomID) {
     const gameType = room.users.length >= 4 ? 'against' : 'coop'; 
     console.log('Starting game type', gameType);
 
-    const gameServerWs = new WebSocket('ws://localhost:4001');
+    const gameServerUrl = REACT_APP_GAMESERVER_URL.replace(/^http/, 'ws');
+    const gameServerWs = new WebSocket(gameServerUrl);
     gameServerWs.onopen = () => {
         gameServerWs.send(JSON.stringify({
             type: 'initializeGame',

@@ -6,6 +6,9 @@ const { on } = require('events');
 const app = express();
 const server = http.createServer(app);
 
+const REACT_APP_SERVER1_URL= "https://my-backend-server1-610139900de0.herokuapp.com/"
+const REACT_APP_GAMESERVER_URL="https://my-backend-gameserver-c1e077ac9497.herokuapp.com/"
+
 const wss = new WebSocket.Server({ server });
 
 const GameState = Object.freeze({
@@ -339,7 +342,8 @@ wss.on('connection', (ws) =>{
 })
 
 sendStartGameResponse = (gameRoomID, roomID) => {
-    const mainserverSocket = new WebSocket('ws://localhost:3001');
+    const serverURL = REACT_APP_SERVER1_URL.replace(/^http/, 'ws');
+    const mainserverSocket = new WebSocket(serverURL);
     mainserverSocket.on('open', () => {
         mainserverSocket.send(JSON.stringify({
             type: 'startGameResponse',
