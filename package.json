@@ -4,7 +4,7 @@
   "scripts": {
     "start": "concurrently \"npm:start --prefix my-server-app\" \"npm:start --prefix backend-app\""
   },
-  "dependencies": {
+  "devDependencies": {
     "concurrently": "^8.2.2"
   }
 }
