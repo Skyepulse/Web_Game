@@ -63,6 +63,7 @@ function GameContainer(){
         ws.current.onopen = () => {
             function sendMessageOnReady(){
                 if(ws.current.readyState === WebSocket.OPEN) {
+                    console.log('Sending user join message with gameRoomID: ', gameRoomID.current, ' and userID: ', userID.current);
                     ws.current.send(JSON.stringify({
                         type: 'userJoin',
                         userID: userID.current,
@@ -139,7 +140,7 @@ function GameContainer(){
                                 <li className = 'teamNameListElement' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                             {leftUsers.filter(user => user.team === 'blue').map(user => (
-                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
+                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'grey'}}><span>{user.name}</span></li>
                             ))}
                         </ol>
                         <h3>Points: {scores.blue}</h3>
@@ -151,7 +152,7 @@ function GameContainer(){
                                 <li className = 'teamNameListElement' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
                             ))}
                             {leftUsers.filter(user => user.team === 'red').map(user => (
-                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
+                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'grey'}}><span>{user.name}</span></li>
                             ))}
                         </ol>
                         <h3>Points: {scores.red}</h3>

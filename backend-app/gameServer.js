@@ -1,11 +1,18 @@
 const express = require('express');
 const WebSocket = require('ws');
 const http = require('http');
+const { on } = require('events');
 
 const app = express();
 const server = http.createServer(app);
 
 const wss = new WebSocket.Server({ server });
+
+const GameState = Object.freeze({
+    MASTER_TURN: 'MASTER_TURN',
+    GUESS_TURN: 'GUESS_TURN',
+    WAITING: 'WAITING'
+});
 
 class game {
     constructor(roomID, gameRoomID, users, gameType) {
@@ -27,6 +34,7 @@ class game {
         this.POINTS_RADIUS = 45;
 
         users.forEach((user) => {
+            user.disconnected = false;
             if(user.team === 'red') {
                 this.redUsers.push(user);
             }
@@ -40,6 +48,8 @@ class game {
         this.blueNumPlayers = this.blueUsers.length;
         this.redNumPlayers = this.redUsers.length;
         this.currentTeam = null;
+        this.currentCard = {text1: '', text2: ''};
+        this.gameState = GameState.WAITING;
     }
 
     buildCardsManager(cardsFilePath){
@@ -65,6 +75,7 @@ class game {
 
     readyPlayer(){
         let randomCard = this.cardsManager.getRandomCard();
+        this.currentCard = randomCard;
         broadCastNewCard(this.gameRoomID, randomCard.text1, randomCard.text2);
 
         if(this.currentTeam === 'red') {
@@ -77,6 +88,7 @@ class game {
             this.blueUsers[this.currentBluePlayerIndex].master = true;
         }
         broadCastUsers(this.gameRoomID);
+        this.gameState = GameState.MASTER_TURN;
     }
 
     nextTurn() {
@@ -92,7 +104,7 @@ class game {
         this.readyPlayer();
     }
 
-    winPoints(team, points, mainCircleRotation, guessRotation) {
+    winPoints(team, points, mainCircleRotation, guessRotation, shouldReveal = true) {
         console.log('team: ', team, " points: ", points);
         if(team === 'red') {
             this.redScore += points;
@@ -102,8 +114,9 @@ class game {
         //We send to all users the new scores
         this.users.forEach(user => {
             user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore }}));
-            user.ws.send(JSON.stringify({ type: 'revealScore', score: points, team: team , mainCircleRotation: mainCircleRotation, guessRotation: guessRotation}));
+            user.ws.send(JSON.stringify({ type: 'revealScore', score: points, team: team , mainCircleRotation: mainCircleRotation, guessRotation: guessRotation, shouldReveal: shouldReveal}));
         });
+        this.gameState = GameState.WAITING;
     }
 
     guessTurn(mainCircleRotation, POINTS_RADIUS) {
@@ -120,6 +133,7 @@ class game {
                 user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
             });
         }
+        this.gameState = GameState.GUESS_TURN;
     }
 
     userGuess(guessRotation) {
@@ -153,6 +167,47 @@ class game {
             this.winPoints(this.currentTeam === 'red' ? 'blue' : 'red', 1, this.currentMainCircleRotation, guessRotation);
         }
     }
+
+    onDisconnect(user){
+        let team = user.team;
+        user.disconnected = true;
+
+        //If the user was the master, the team wins 0 points and we go to the next turn IFF there are at least 2 players in the other team
+        let teamUsers = team === 'red' ? this.redUsers : this.blueUsers;
+        let oppositeTeamUsers = team === 'red' ? this.blueUsers : this.redUsers;
+
+        if(user.master){
+            //If there are at least 2 players in the opposite team that have disconnected = false, we go to the next turn
+            if(oppositeTeamUsers.filter(user => user.disconnected === false).length >= 2){
+                this.winPoints(team, 0, 0, 0, false);
+                this.nextTurn();
+            }
+            //If there are less than 2 players in the opposite team that have disconnected = false, we wait for them to reconnect
+        }
+    }
+    onReconnect(user){
+        let team = user.team;
+        user.disconnected = false;
+
+        //If the user was the master, we send him the yourTurn message cause that means we are waiting for him to reconnect
+        if(user.master){
+            user.ws.send(JSON.stringify({ type: 'yourTurn' }));
+        }
+
+        //If the user was not the master, and the master is on his team not disconnected, we send him the yourGuessTurn message
+        let teamUsers = team === 'red' ? this.redUsers : this.blueUsers;
+        let oppositeTeamUsers = team === 'red' ? this.blueUsers : this.redUsers;
+
+        if(!user.master && teamUsers.find(user => user.master === true && user.disconnected === false) && this.gameState === GameState.GUESS_TURN){
+            user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
+        }
+
+        //If the user was not the master, and the master is on the opposite team and not disconnected, we do nothing
+
+        //We rebroadcast the current card to the user and the scores to this user
+        user.ws.send(JSON.stringify({ type: 'newCard', cardTexts: { text1: this.currentCard.text1, text2: this.currentCard.text2 }}));
+        user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore }}));
+    }
 };
 
 const games = {};
@@ -177,6 +232,7 @@ wss.on('connection', (ws) =>{
                 const newGame = new game(roomID, gameRoomID, users, gameType);
                 games[gameRoomID] = newGame;
                 sendStartGameResponse(gameRoomID, roomID);
+                console.log('Game initialized with roomID: ', roomID, ' and gameRoomID: ', gameRoomID);
             }
 
             if(data.type === 'nextTurn') {
@@ -222,11 +278,14 @@ wss.on('connection', (ws) =>{
                 const userID = data.userID;
                 const gameRoomID = data.gameRoomID;
                 const game = games[gameRoomID];
+
                 if(!game){
                     ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
                     return;
                 }
+
                 let user = game.users.find(user => user.id === userID);
+
                 if(user){ // Meaning he was intended to be in the game
                     user.ws = ws;
                     ws.gameRoomID = gameRoomID;
@@ -236,6 +295,7 @@ wss.on('connection', (ws) =>{
                         leftUsers[gameRoomID] = leftUsers[gameRoomID].filter(user => user.id !== userID);
                         user.ws = ws;
                         game.users.push(user);
+                        game.onReconnect(user);
                         ws.gameRoomID = gameRoomID;
                     } else {
                         ws.send(JSON.stringify({ type: 'error', message: 'User not found, you are not a player of this game' }));
@@ -259,6 +319,7 @@ wss.on('connection', (ws) =>{
         if(ws.gameRoomID) {
             const leavingUser = games[ws.gameRoomID].users.find(user => user.ws === ws);
             games[ws.gameRoomID].users = games[ws.gameRoomID].users.filter(user => user.ws !== ws);
+            games[ws.gameRoomID].onDisconnect(leavingUser);
             if(games[ws.gameRoomID].users.length === 0) {
                 delete games[ws.gameRoomID];
                 delete leftUsers[ws.gameRoomID];

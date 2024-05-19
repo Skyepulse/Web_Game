@@ -128,7 +128,6 @@ export class MainMenu extends Scene
         this.turnButtonContainer.setSize(200, 100);
         this.turnButtonContainer.setInteractive(new Geom.Rectangle(0, 0, 200, 100), Geom.Rectangle.Contains)
             .on('pointerdown', () => this.onClickTurnButton());
-        console.log('Visible Turn Button:', this.visibleTurnButton);
         this.turnButtonContainer.visible = this.visibleTurnButton;
 
         this.textContainer = this.add.container(this.screenX/2, this.screenY/2);
@@ -251,9 +250,8 @@ export class MainMenu extends Scene
         this.pickerContainer.rotation = this.mouse.rotation <= 0 ? this.mouse.rotation  - Math.DegToRad(90): Math.DegToRad(180);
     }
 
-    movePickerToAngle(degRotation){
-        if(!this.pickerVisible) return;
-        this.pickerContainer.rotation = degRotation <= 0 ? degRotation  - Math.DegToRad(90): Math.DegToRad(180);
+    movePickerToAngle(radRotation){
+        this.pickerContainer.rotation = radRotation <= 0 ? radRotation  - Math.DegToRad(90): Math.DegToRad(180);
     }
 
     changeCoverCircle(){
@@ -285,12 +283,16 @@ export class MainMenu extends Scene
     }
 
     showPicker(){
-        console.log('Showing picker');
+        if(this.pickerContainer == null){
+            this.pickerVisible = true;
+            this.pickerClickable = true;
+            this.pickerMoveable = true;
+            return;
+        }
         this.pickerContainer.visible = true;
         this.pickerVisible = true;
         this.pickerClickable = true;
         this.pickerMoveable = true;
-        console.log('Picker visible:', this.pickerVisible);
     }
 
     showPickerReveal(){
@@ -341,15 +343,26 @@ export class MainMenu extends Scene
 
     revealScore(response){
         let mainCircleRotation = response.mainCircleRotation;
-        let guessRotation = response.guessRotation;
+        let guessRotation = - response.guessRotation * Math.PI2 / 360;
         let score = response.score;
         let team = response.team;
+        let shouldReveal = response.shouldReveal;
+
+        this.showText('Score: ' + score + ' Team: ' + team, team === 'red' ? '#ff0000' : '#0000ff');
+
+        if(!shouldReveal){
+            if(this.currentMaster){
+                EventBus.emit('send-server-message', {type: 'nextTurn'});
+                this.currentMaster = false;
+            }
+            return;
+        }
 
         this.mainCircleContainer.rotation = mainCircleRotation;
-        this.movePickerToAngle(-guessRotation);
+        this.movePickerToAngle(guessRotation);
         this.showPickerReveal();
         this.changeCoverCircle();
-        this.showText('Score: ' + score + ' Team: ' + team, team === 'red' ? '#ff0000' : '#0000ff');
+        
         
         this.eventTimerManager.addTimer(new EventTimer(this.lookAtRevealTime*1000, () => {
             this.hidePickerReveal();
