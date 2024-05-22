@@ -15,7 +15,7 @@ function WaitingRoom() {
     const serverURL = process.env.REACT_APP_SERVER1_URL.replace(/^http/, 'ws');
 
     const joinTeam = (team) => {
-        if (ws.current) {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             ws.current.send(JSON.stringify({ type: 'changeTeam', color: team, roomID: roomID}));
             localStorage.setItem('team', team);
         }

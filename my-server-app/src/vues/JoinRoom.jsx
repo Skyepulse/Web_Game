@@ -17,7 +17,14 @@ function JoinRoom() {
                 history('/');
             
             }
-            ws.current.send(JSON.stringify({ type: 'roomExists', roomID: localStorage.getItem('LastRoomID') }));
+            function sendMessageOnReady(){
+                if(ws.current.readyState === WebSocket.OPEN) {
+                    ws.current.send(JSON.stringify({ type: 'roomExists', roomID: localStorage.getItem('LastRoomID') }));
+                } else {
+                    setTimeout(sendMessageOnReady, 100);
+                }
+            }
+            sendMessageOnReady();
         };
 
         ws.current.onmessage = (message) => {
