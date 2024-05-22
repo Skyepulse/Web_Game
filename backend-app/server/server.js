@@ -1,12 +1,19 @@
 const express = require('express');
 const WebSocket = require('ws');
 const http = require('http');
+const dotenv = require('dotenv');
 
 const app = express();
 const server = http.createServer(app);
 
-const REACT_APP_SERVER1_URL= "https://mygameserver-80ed1fdd6825.herokuapp.com/"
-const REACT_APP_GAMESERVER_URL="https://mygameserver2-01d2fddcdc4a.herokuapp.com/"
+if(process.env.NODE_ENV !== 'production') {
+    dotenv.config({path: './.env.production'});
+} else {
+    dotenv.config({path: './.env.development'});
+}
+
+const REACT_APP_SERVER1_URL= process.env.REACT_APP_SERVER1_URL;
+const REACT_APP_GAMESERVER_URL= process.env.REACT_APP_GAMESERVER_URL;
 
 //const REACT_APP_SERVER1_URL="http://localhost:3001/"
 //const REACT_APP_GAMESERVER_URL="http://localhost:4001/"
