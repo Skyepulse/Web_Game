@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 function WaitingRoom() {
     const [users, setUsers] = useState([]);
     const [headerColor] = useState('black'); //We will use this to determine the color of the header [black, red, blue]
+    const [loading, setLoading] = useState(true); //loading state
     const location = useLocation();
     const history = useNavigate();
     const {roomID} = useParams(); //We extract the roomID from the URL
@@ -83,6 +84,7 @@ function WaitingRoom() {
                 userName.current = location.state.name;
             }
             const team = localStorage.getItem('team') || 'none';
+            setLoading(false);
             ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID, master: master.current}));
         };
 
@@ -112,12 +114,13 @@ function WaitingRoom() {
             if(ws.current.readyState === 1)
                 ws.current.close();
         };
-    }, [roomID, history, location.state?.name, master, serverURL]);
+    }, [roomID, history, location.state?.name, master, serverURL, loading]);
 
     useEffect(() => {
         usersRef.current = users;
     }, [users]);
 
+    if(loading) return (<div><h2>Loading...</h2></div>);
 
     return (
         <div>
