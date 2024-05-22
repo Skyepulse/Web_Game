@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 const app = express();
 const server = http.createServer(app);
 
-if(process.env.NODE_ENV !== 'production') {
+if(process.env.NODE_ENV === 'production') {
     dotenv.config({path: './.env.production'});
 } else {
     dotenv.config({path: './.env.development'});

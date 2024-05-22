@@ -114,7 +114,7 @@ function WaitingRoom() {
             if(ws.current.readyState === 1)
                 ws.current.close();
         };
-    }, [roomID, history, location.state?.name, master, serverURL, loading]);
+    }, [roomID, history, location.state?.name, master, serverURL]);
 
     useEffect(() => {
         usersRef.current = users;
