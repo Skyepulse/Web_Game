@@ -8,7 +8,7 @@ export class Boot extends Scene {
 
     preload()
     {
-        this.load.setBaseURL('/assets/');
+        this.load.setBaseURL('/Assets/');
         this.load.image('background', 'bg.png');
     }
 
