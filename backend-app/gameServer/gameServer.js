@@ -6,8 +6,11 @@ const { on } = require('events');
 const app = express();
 const server = http.createServer(app);
 
-const REACT_APP_SERVER1_URL= "https://my-backend-server1-610139900de0.herokuapp.com/"
-const REACT_APP_GAMESERVER_URL="https://my-backend-gameserver-c1e077ac9497.herokuapp.com/"
+//const REACT_APP_SERVER1_URL= "https://my-backend-server1-610139900de0.herokuapp.com/"
+//const REACT_APP_GAMESERVER_URL="https://my-backend-gameserver-c1e077ac9497.herokuapp.com/"
+
+const REACT_APP_SERVER1_URL="http://localhost:3001/"
+const REACT_APP_GAMESERVER_URL="http://localhost:4001/"
 
 const wss = new WebSocket.Server({ server });
 
