@@ -74,6 +74,10 @@ export class MainMenu extends Scene
     {
         this.screenX = this.registry.get('gameWidth');
         this.screenY = this.registry.get('gameHeight');
+
+        let cardsText = this.cache.text.get('cards');
+        EventBus.emit('send-server-message', {type: 'cards', cards: cardsText});
+        
         
         this.mainCircleGraphics = this.add.graphics();
         this.mainCircleContainer = this.add.container(this.screenX/2, this.screenY/2);
@@ -130,8 +134,9 @@ export class MainMenu extends Scene
             .on('pointerdown', () => this.onClickTurnButton());
         this.turnButtonContainer.visible = this.visibleTurnButton;
 
-        this.textContainer = this.add.container(this.screenX/2, this.screenY/2);
+        this.textContainer = this.add.container(this.screenX/2, this.screenY/2 - this.MAIN_CIRCLE_RADIUS/2);
         this.text = this.add.text(0, 0, '', {fontFamily: 'Arial', fontSize: 24, color: '#ffffff'});
+        this.text.setOrigin(0.5, 0.5);
         this.textContainer.add(this.text);
         this.textContainer.visible = this.textVisible;
 
@@ -149,6 +154,16 @@ export class MainMenu extends Scene
                 }
             }
         });
+
+        //For Debug, if we press space show text:
+        /*
+        this.input.keyboard.on('keydown-SPACE', () => {
+            this.showText('This is a test text', {color: '#ff0000'});
+            this.eventTimerManager.addTimer(new EventTimer(2000, () => {
+                this.hideText();
+            }));
+        });
+        */
 
         this.events.on('your-turn', () => {
             this.showTurnButton();
@@ -348,7 +363,7 @@ export class MainMenu extends Scene
         let team = response.team;
         let shouldReveal = response.shouldReveal;
 
-        this.showText('Score: ' + score + ' Team: ' + team, team === 'red' ? '#ff0000' : '#0000ff');
+        this.showText('Score: ' + score + ' Team: ' + team, {color: team === 'red' ? '#ff0000' : '#0000ff'});
 
         if(!shouldReveal){
             if(this.currentMaster){
@@ -376,9 +391,10 @@ export class MainMenu extends Scene
 
     }
 
-    showText(text, color){
+    showText(text, style){
         this.text.setText(text);
-        this.text.setColor(color);
+        this.text.setStyle(style);
+        this.text.setStroke('#FFFFFF', 4);
         this.textContainer.visible = true;
         this.textVisible = true;
     }

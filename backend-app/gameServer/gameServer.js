@@ -39,10 +39,6 @@ class game {
         this.blueScore = 0;
         this.cardsManager = new CardsManager();
 
-        this.buildCardsManager('./cards.txt');
-
-
-
         this.currentMainCircleRotation = 0;
         this.POINTS_RADIUS = 45;
 
@@ -63,19 +59,28 @@ class game {
         this.currentTeam = null;
         this.currentCard = {text1: '', text2: ''};
         this.gameState = GameState.WAITING;
+
+        this.logs = [];
     }
 
-    buildCardsManager(cardsFilePath){
-        /*
-        const fs = require('fs');
-        const cards = fs.readFileSync(cardsFilePath, 'utf8').split('\n');
-        cards.forEach(card => {
-            const [t1, t2] = card.split(',').map(t => t.trim());
-            if(t1 && t2) this.cardsManager.addCard(new Card(t1, t2));
+    addLog(username, team, message){
+        this.logs.push({username: username, team: team, message: message});
+        this.users.forEach(user => {
+            user.ws.send(JSON.stringify({ type: 'updateLogs', logs: this.logs }));
         });
-        console.log('CardsManager built with ', this.cardsManager.getNumberOfCards(), ' cards');
-        */
-        this.cardsManager.addCard(new Card('jayjay', 'naynay'));
+    }
+
+    buildCardsManager(cards){
+        let cardsSplit = cards.split('\n');
+        cardsSplit.forEach(card => {
+            const [text1, text2] = card.split(',').map(text => text.trim());
+            if(text1 && text2) this.cardsManager.addCard(new Card(text1, text2));
+        });
+        if(this.currentCard.text1 === 'loading...' && this.currentCard.text2 === 'loading...'){
+            let randomCard = this.cardsManager.getRandomCard();
+            this.currentCard = randomCard;
+            broadCastNewCard(this.gameRoomID, randomCard.text1, randomCard.text2);
+        }
     }
 
     selectRandomTeam() {
@@ -223,6 +228,7 @@ class game {
         //We rebroadcast the current card to the user and the scores to this user
         user.ws.send(JSON.stringify({ type: 'newCard', cardTexts: { text1: this.currentCard.text1, text2: this.currentCard.text2 }}));
         user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore }}));
+        user.ws.send(JSON.stringify({ type: 'updateLogs', logs: this.logs }));
     }
 };
 
@@ -326,6 +332,31 @@ wss.on('connection', (ws) =>{
                 }
             }
 
+            if(data.type === 'cards'){
+                const cards = data.cards;
+                const gameRoomID = data.gameRoomID;
+                const game = games[gameRoomID];
+                if(!game) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+                    return;
+                }
+
+                let user = game.users.find(user => user.ws === ws);
+                if(user.master) game.buildCardsManager(cards);
+            }
+
+            if(data.type === 'newLog'){
+                const gameRoomID = data.gameRoomID;
+                const game = games[gameRoomID];
+                if(!game) {
+                    ws.send(JSON.stringify({ type: 'error', message: 'Game not found' }));
+                    return;
+                }
+
+                let user = game.users.find(user => user.ws === ws);
+                game.addLog(user.name, user.team, data.message);
+            }
+
         } catch (error) {
             console.error('Error parsing message: ', error);
         }
@@ -424,6 +455,7 @@ class CardsManager{
     }
 
     getRandomCard(){
+        if(this.cards.length === 0) return new Card('loading...', 'loading...');
         const rand = Math.random();
         let cumWeight = 0;
 

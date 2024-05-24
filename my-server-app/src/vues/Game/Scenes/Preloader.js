@@ -22,10 +22,10 @@ export class Preloader extends Scene
         this.load.setPath('/Assets/');
         this.load.image('logo', 'logo.png');
         this.load.image('star', 'star.png');
+        this.load.text('cards', 'cards.txt');
     }
 
     create(){
         this.scene.start('MainMenu');
     }
-    
 }

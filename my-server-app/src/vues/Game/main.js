@@ -12,9 +12,11 @@ const config = {
     input: {
         mouse : true,
     },
+    /*
     scale: {
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
+    */
     parent: 'gameContainer',
     backgroundColor: '#c1a7a7',
     scene: [

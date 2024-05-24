@@ -10,12 +10,14 @@ function GameContainer(){
     const [users, setUsers] = useState([]);
     const [leftUsers, setLeftUsers] = useState([]); 
     const [scores, setScores] = useState({red: 0, blue: 0});
+    const [logs, setLogs] = useState([]); // [ {username: 'user1', team: 'blue', message: 'message1'}, {username: 'user2', team = 'red', message: 'message2'} ] 
     const gameRoomID = useRef();
     const location = useLocation();
     const history = useNavigate();
     const userID = useRef();
     const ws = useRef(null);
-    const [cardTexts, setCardTexts] = useState({text1: 'Default', text2: 'Default'});
+    const chatBoxRef = useRef(null);
+    const [cardTexts, setCardTexts] = useState({text1: 'loading...', text2: 'loading...'});
     const gameServerUrl = process.env.REACT_APP_GAMESERVER_URL.replace(/^http/, 'ws');
 
     const loadGameSession = () => {
@@ -54,6 +56,25 @@ function GameContainer(){
                     guessRotation: message.guessRotation
                 }));
             }
+            if(message.type === 'cards'){
+                ws.current.send(JSON.stringify({
+                    type: 'cards',
+                    gameRoomID: gameRoomID.current,
+                    cards: message.cards
+                }));
+            }
+        }
+    }
+
+    const sendLog = () => {
+        const chatInput = document.getElementById('chatInput');
+        if(chatInput.value.length > 0){
+            ws.current.send(JSON.stringify({
+                type: 'newLog',
+                gameRoomID: gameRoomID.current,
+                message: chatInput.value
+            }));
+            chatInput.value = '';
         }
     }
 
@@ -109,6 +130,9 @@ function GameContainer(){
                     setCardTexts(response.cardTexts);
                     console.log('New card texts: ', response.cardTexts);
                 }
+                if(response.type === 'updateLogs'){
+                    setLogs(response.logs);
+                }
             } catch (error) {
                 console.error('Error parsing message: ', error);
             }
@@ -122,6 +146,26 @@ function GameContainer(){
                 ws.current.close();
         }
     }, [location.state, history, gameServerUrl]);
+
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if(event.key === 'Enter'){
+                sendLog();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
+    useEffect(() => {
+        if(chatBoxRef.current){
+            chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+        }
+    }, [logs]);
 
     return(
         <div className='gameApp'>
@@ -159,8 +203,23 @@ function GameContainer(){
                         <h3>Points: {scores.red}</h3>
                     </div>
                 </div>
+                <div className='chat'>
+                    <div className='chatBox' ref={chatBoxRef}>
+                        {logs.map((log, index) => (
+                            <div className='chatMessage' key={index}>
+                                <span style={{color: log.team === 'blue' ? 'blue': 'red'}}>{log.username}</span>
+                                <span>: {log.message}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className = 'inputContainer'>
+                        <input type='text' id='chatInput' placeholder='Type to write in chat...'/>
+                        <div className ='sendButton' 
+                            onClick = {sendLog}>Send</div>
+                    </div>
+                </div>
                 <div className='cardTexts'>
-                    <h2>Card Texts</h2>
+                    <h2>Current Round Card</h2>
                     <div className='cardText'>
                         <div className = 'cardT' id = 't1'>{cardTexts.text1}</div>
                         <div className = 'lineSeparator'></div>
@@ -175,7 +234,6 @@ function GameContainer(){
 const currentGameScene = (scene) => {
     //console.log('Current Scene: ', scene.scene.key);
 }
-
 
 
 export default GameContainer;
