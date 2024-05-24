@@ -207,8 +207,8 @@ function GameContainer(){
                     <div className='chatBox' ref={chatBoxRef}>
                         {logs.map((log, index) => (
                             <div className='chatMessage' key={index}>
-                                <span style={{color: log.team === 'blue' ? 'blue': 'red'}}>{log.username}</span>
-                                <span>: {log.message}</span>
+                                <span style={{color: log.color}}>{log.username}</span>
+                                <span style={{color: log.messageColor}}>: {log.message}</span>
                             </div>
                         ))}
                     </div>

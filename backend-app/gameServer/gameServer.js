@@ -64,7 +64,25 @@ class game {
     }
 
     addLog(username, team, message){
-        this.logs.push({username: username, team: team, message: message});
+        let teamColor = team === 'red' ? 'red' : 'blue';
+        this.logs.push({username: username, color: teamColor, message: message, messageColor: 'black'});
+        if(this.logs.length > 50) this.logs.shift();
+        this.users.forEach(user => {
+            user.ws.send(JSON.stringify({ type: 'updateLogs', logs: this.logs }));
+        });
+    }
+
+    addSystemLog(message){
+        this.logs.push({username: 'System', color: 'green', message: message, messageColor: 'green'});
+        if(this.logs.length > 50) this.logs.shift();
+        this.users.forEach(user => {
+            user.ws.send(JSON.stringify({ type: 'updateLogs', logs: this.logs }));
+        });
+    }
+
+    addConnectionLog(message){
+        this.logs.push({username: 'System', color: 'purple', message: message, messageColor: 'purple'});
+        if(this.logs.length > 50) this.logs.shift();
         this.users.forEach(user => {
             user.ws.send(JSON.stringify({ type: 'updateLogs', logs: this.logs }));
         });
@@ -101,10 +119,12 @@ class game {
 
         if(this.currentTeam === 'red') {
             this.redUsers[this.currentRedPlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            this.addSystemLog('It\'s ' + this.redUsers[this.currentRedPlayerIndex].name + '\'s turn to give clues!');
             console.log('sent your turn to red player: ', this.redUsers[this.currentRedPlayerIndex].name);
             this.redUsers[this.currentRedPlayerIndex].master = true;
         } else {
             this.blueUsers[this.currentBluePlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            this.addSystemLog('It\'s ' + this.blueUsers[this.currentBluePlayerIndex].name + '\'s turn to give clues!');
             console.log('sent your turn to blue player: ', this.blueUsers[this.currentBluePlayerIndex].name);
             this.blueUsers[this.currentBluePlayerIndex].master = true;
         }
@@ -148,11 +168,13 @@ class game {
             sameTeamNotMasterUsers.forEach(user => {
                 user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
             });
+            this.addSystemLog('It\'s ' + this.redUsers[this.currentRedPlayerIndex].name + '\'s team turn to guess!');
         } else {
             let sameTeamNotMasterUsers = this.blueUsers.filter(user => user.master === false);
             sameTeamNotMasterUsers.forEach(user => {
                 user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
             });
+            this.addSystemLog('It\'s ' + this.blueUsers[this.currentBluePlayerIndex].name + '\'s team turn to guess!');
         }
         this.gameState = GameState.GUESS_TURN;
     }
@@ -174,18 +196,25 @@ class game {
         //We check if we have the three points. We know guessRotation is between 0 and 180:
         if(trueMainCircleRotation - threePointsRadius <= guessRotation && guessRotation <= trueMainCircleRotation + threePointsRadius){
             this.winPoints(this.currentTeam, 3, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 3 points!');
         } else if(secondMainCircleRotation - threePointsRadius <= guessRotation && guessRotation <= secondMainCircleRotation + threePointsRadius){
             this.winPoints(this.currentTeam, 3, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 3 points!');
         } else if(trueMainCircleRotation - twoPointsRadius <= guessRotation && guessRotation <= trueMainCircleRotation + twoPointsRadius){
             this.winPoints(this.currentTeam, 2, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 2 points!');
         } else if(secondMainCircleRotation - twoPointsRadius <= guessRotation && guessRotation <= secondMainCircleRotation + twoPointsRadius){
             this.winPoints(this.currentTeam, 2, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 2 points!');
         } else if(trueMainCircleRotation - onePointRadius <= guessRotation && guessRotation <= trueMainCircleRotation + onePointRadius){
             this.winPoints(this.currentTeam, 1, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 1 point!');
         } else if(secondMainCircleRotation - onePointRadius <= guessRotation && guessRotation <= secondMainCircleRotation + onePointRadius){
             this.winPoints(this.currentTeam, 1, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 1 point!');
         } else {
             this.winPoints(this.currentTeam === 'red' ? 'blue' : 'red', 1, this.currentMainCircleRotation, guessRotation);
+            this.addSystemLog('Oh no, the guess was incorrect! ' + (this.currentTeam === 'red' ? 'blue' : 'red') + ' team wins 1 point!');
         }
     }
 
@@ -202,11 +231,15 @@ class game {
             if(oppositeTeamUsers.filter(user => user.disconnected === false).length >= 2){
                 this.winPoints(team, 0, 0, 0, false);
                 this.nextTurn();
+                this.addConnectionLog(user.name + ' disconnected. ' + team + ' team wins 0 points and we go to the next turn.');
+            } else {
+                this.addConnectionLog(user.name + ' disconnected. Please wait for reconnections to continue the game.');
             }
             //If there are less than 2 players in the opposite team that have disconnected = false, we wait for them to reconnect
         }
     }
     onReconnect(user){
+        this.addConnectionLog(user.name + ' reconnected!');
         let team = user.team;
         user.disconnected = false;
 
