@@ -32,22 +32,27 @@ function WaitingRoom() {
     }
 
     const startGame = () => {
-        if (ws.current && users.length > 1) {
+        if (ws.current && users.length > 3) {
             //We check that all users found a team SO no users has team 'none'
             if(users.find(user => user.team === 'none')) {
                 alert('Some users have not chosen a team yet');
                 return;
             }
             //We check each team has at least one player
-            if(users.filter(user => user.team === 'red').length < 1 || users.filter(user => user.team === 'blue').length < 1) {
-                alert('Each team must have at least one player');
+            if(users.filter(user => user.team === 'red').length < 2 || users.filter(user => user.team === 'blue').length < 2) {
+                alert('Each team must have at least two players');
                 return;
             }
             const me = users.find(user => user.id === localStorage.getItem('userID'));
             if(me.master) {
                 ws.current.send(JSON.stringify({ type: 'startGame', roomID: roomID }));
             }
-        } else if (users.length <= 1) {
+        } else if (users.length <= 4 && users.length > 1) { 
+            const me = users.find(user => user.id === localStorage.getItem('userID'));
+            if(me.master) {
+                ws.current.send(JSON.stringify({ type: 'startGame', roomID: roomID }));
+            }
+        } else {
             alert('You need at least 2 players to start the game');
         }
     };
@@ -83,7 +88,8 @@ function WaitingRoom() {
                 localStorage.setItem('userName', location.state.name);
                 userName.current = location.state.name;
             }
-            const team = localStorage.getItem('team') || 'none';
+            let team = localStorage.getItem('team') || 'none';
+            if(team === 'coop') team = 'none';
             setLoading(false);
             ws.current.send(JSON.stringify({ type: 'setUser', name: userName.current, userID: userID, team: team, roomID: roomID, master: master.current}));
         };
@@ -102,8 +108,9 @@ function WaitingRoom() {
                 history('/');
             } else if(response.type === 'startGame') {
                 const gameRoomID = response.gameRoomID;
+                const gameType = response.gameType;
                 const userID = localStorage.getItem('userID'); 
-                history(`/game/${gameRoomID}`, {state: {users: usersRef.current, gameRoomID: gameRoomID, userID: userID}});
+                history(`/game/${gameRoomID}`, {state: {users: usersRef.current, gameRoomID: gameRoomID, userID: userID, gameType: gameType}});
             }
         };
 
@@ -120,11 +127,47 @@ function WaitingRoom() {
         usersRef.current = users;
     }, [users]);
 
+    const copyJoinLink = () => {
+        const link = `${window.location.origin}/room/${roomID}`;
+        navigator.clipboard.writeText(link);
+    };
+
     if(loading) return (<div><h2>Loading...</h2></div>);
+    else if(users.length < 4) return(
+        <div className='WaitingRoomMainDiv'>
+            <div id='waitingHeader'>
+                <h2 style={{color: headerColor}}>Waiting Room</h2>
+                <button id='linkButton' onClick={() => {copyJoinLink()}}>Click to copy join link.</button>
+            </div>
+            <div id='teams'>
+                <div id='none' className='team'>
+                    <h3>This is your team</h3>
+                    <ul>
+                        {users.map(user => (
+                            <li key={user.id} style = {{color: user.master ? 'green': 'inherit'}}>{user.name}</li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+            <div id = 'TeamButtons'>
+                <button id='joinRedInvis'>Join Red</button>
+                <button id='joinBlueInvis'>Join Blue</button>
+            </div>
+            <div id='startGameDiv'>
+                <button id='startGame' onClick={() => {startGame()}}>Start Game</button>
+            </div>
+            <div id = 'DisconnectDiv'>
+                <button id = 'Disconnect' onClick={() => {disconnect()}}>Disconnect</button>
+            </div>
+        </div>
+    );
 
     return (
-        <div>
-            <h2 style={{color: headerColor}}>Waiting Room</h2>
+        <div className='WaitingRoomMainDiv'>
+            <div id='waitingHeader'>
+                <h2 style={{color: headerColor}}>Waiting Room</h2>
+                <button id='linkButton' onClick={() => {copyJoinLink()}}>Click to copy join link.</button>
+            </div>
             <div id='teams'>
                 <div id='red' className='team'>
                     <h3>Red Team</h3>
@@ -158,7 +201,9 @@ function WaitingRoom() {
             <div id='startGameDiv'>
                 <button id='startGame' onClick={() => {startGame()}}>Start Game</button>
             </div>
-            <button id = 'Disconnect' onClick={() => {disconnect()}}>Disconnect</button>
+            <div id = 'DisconnectDiv'>
+                <button id = 'Disconnect' onClick={() => {disconnect()}}>Disconnect</button>
+            </div>
         </div>
     );
 }

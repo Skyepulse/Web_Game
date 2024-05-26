@@ -56,10 +56,10 @@ function MainView() {
     return(
         <div className="App">
             <h1> 
-                My web game name.  
+                Wavelength Fan Game  
             </h1>
             <header className="App-header">
-                <p>Hello Choose a Name to create a waiting room!!</p>
+                <p>Hello, choose a Username to create a waiting room!!</p>
                 <input
                     type='text' 
                     placeholder='Enter your name...'

@@ -45,18 +45,15 @@ export const PhaserGame = forwardRef(function PhaserGame({currentActiveScene, se
         EventBus.on('send-server-message', (message) => {
             if(sendServerMessage instanceof Function)
             {
-                console.log('Sending message from game: ', message);
                 sendServerMessage(message);
             }
         });
 
         EventBus.on('your-turn', () => {
-            console.log('Your turn on middle');
             game.current.scene.scenes[2].showTurnButton();
         });
 
         EventBus.on('your-guess-turn', () => {
-            console.log('Your guess turn on middle');
             game.current.scene.scenes[2].showPicker();
         });
 

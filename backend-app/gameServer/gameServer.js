@@ -31,12 +31,15 @@ class game {
     constructor(roomID, gameRoomID, users, gameType) {
         this.roomID = roomID;
         this.gameRoomID = gameRoomID;
+        this.gameType = gameType;
         this.users = users;
         this.redUsers = [];
         this.blueUsers = [];
+        this.coopUsers = [];
         this.hasStarted = false;
         this.redScore = 0;
         this.blueScore = 0;
+        this.coopScore = 0;
         this.cardsManager = new CardsManager();
 
         this.currentMainCircleRotation = 0;
@@ -44,18 +47,18 @@ class game {
 
         users.forEach((user) => {
             user.disconnected = false;
-            if(user.team === 'red') {
-                this.redUsers.push(user);
-            }
-            if(user.team === 'blue') {
-                this.blueUsers.push(user);
-            }
+            if(user.team === 'red') this.redUsers.push(user);
+            if(user.team === 'blue') this.blueUsers.push(user);
+            if(gameType === 'coop') this.coopUsers.push(user);
+            if(gameType === 'coop') user.team = 'coop';
         });
 
         this.currentRedPlayerIndex = 0;
         this.currentBluePlayerIndex = 0;
+        this.currentCoopPlayerIndex = 0;
         this.blueNumPlayers = this.blueUsers.length;
         this.redNumPlayers = this.redUsers.length;
+        this.coopNumPlayers = this.coopUsers.length;
         this.currentTeam = null;
         this.currentCard = {text1: '', text2: ''};
         this.gameState = GameState.WAITING;
@@ -65,6 +68,7 @@ class game {
 
     addLog(username, team, message){
         let teamColor = team === 'red' ? 'red' : 'blue';
+        if(team === 'coop') teamColor = 'black';
         this.logs.push({username: username, color: teamColor, message: message, messageColor: 'black'});
         if(this.logs.length > 50) this.logs.shift();
         this.users.forEach(user => {
@@ -102,6 +106,10 @@ class game {
     }
 
     selectRandomTeam() {
+        if(this.gameType === 'coop'){
+            this.currentTeam = 'coop';
+            return;
+        }
         //Select "blue" or "red" randomly
         this.currentTeam = Math.random() < 0.5 ? 'red' : 'blue';
     }
@@ -117,31 +125,44 @@ class game {
         this.currentCard = randomCard;
         broadCastNewCard(this.gameRoomID, randomCard.text1, randomCard.text2);
 
+        if(this.gameType === 'coop') {
+            this.coopUsers[this.currentCoopPlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
+            this.addSystemLog('It\'s ' + this.coopUsers[this.currentCoopPlayerIndex].name + '\'s turn to give clues!');
+            console.log('sent your turn to coop player: ', this.coopUsers[this.currentCoopPlayerIndex].name);
+            this.coopUsers[this.currentCoopPlayerIndex].master = true;
+        }
+
         if(this.currentTeam === 'red') {
             this.redUsers[this.currentRedPlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
             this.addSystemLog('It\'s ' + this.redUsers[this.currentRedPlayerIndex].name + '\'s turn to give clues!');
             console.log('sent your turn to red player: ', this.redUsers[this.currentRedPlayerIndex].name);
             this.redUsers[this.currentRedPlayerIndex].master = true;
-        } else {
+        } else if(this.currentTeam === 'blue') {
             this.blueUsers[this.currentBluePlayerIndex].ws.send(JSON.stringify({ type: 'yourTurn' }));
             this.addSystemLog('It\'s ' + this.blueUsers[this.currentBluePlayerIndex].name + '\'s turn to give clues!');
             console.log('sent your turn to blue player: ', this.blueUsers[this.currentBluePlayerIndex].name);
             this.blueUsers[this.currentBluePlayerIndex].master = true;
         }
+
         broadCastUsers(this.gameRoomID);
         this.gameState = GameState.MASTER_TURN;
     }
 
     nextTurn() {
+        if(this.gameType === 'coop') {
+            this.coopUsers[this.currentCoopPlayerIndex].master = false;
+            this.currentCoopPlayerIndex = (this.currentCoopPlayerIndex + 1) % this.coopNumPlayers;
+        }
+
         if(this.currentTeam === 'red') {
             this.redUsers[this.currentRedPlayerIndex].master = false;
             this.currentRedPlayerIndex = (this.currentRedPlayerIndex + 1) % this.redNumPlayers;
-        } else {
+        } else if(this.currentTeam === 'blue'){
             this.blueUsers[this.currentBluePlayerIndex].master = false;
             this.currentBluePlayerIndex = (this.currentBluePlayerIndex + 1) % this.blueNumPlayers;
         }
 
-        this.currentTeam = this.currentTeam === 'red' ? 'blue' : 'red';
+        if(this.currentTeam != 'coop') this.currentTeam = this.currentTeam === 'red' ? 'blue' : 'red';
         this.readyPlayer();
     }
 
@@ -149,12 +170,14 @@ class game {
         console.log('team: ', team, " points: ", points);
         if(team === 'red') {
             this.redScore += points;
-        } else {
+        } else if(team === 'blue'){
             this.blueScore += points;
+        } else if(team === 'coop'){
+            this.coopScore += points;
         }
         //We send to all users the new scores
         this.users.forEach(user => {
-            user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore }}));
+            user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore, coop: this.coopScore}}));
             user.ws.send(JSON.stringify({ type: 'revealScore', score: points, team: team , mainCircleRotation: mainCircleRotation, guessRotation: guessRotation, shouldReveal: shouldReveal}));
         });
         this.gameState = GameState.WAITING;
@@ -169,12 +192,18 @@ class game {
                 user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
             });
             this.addSystemLog('It\'s ' + this.redUsers[this.currentRedPlayerIndex].name + '\'s team turn to guess!');
-        } else {
+        } else if(this.currentTeam === 'blue'){
             let sameTeamNotMasterUsers = this.blueUsers.filter(user => user.master === false);
             sameTeamNotMasterUsers.forEach(user => {
                 user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
             });
             this.addSystemLog('It\'s ' + this.blueUsers[this.currentBluePlayerIndex].name + '\'s team turn to guess!');
+        } else if(this.currentTeam === 'coop'){
+            let sameTeamNotMasterUsers = this.coopUsers.filter(user => user.master === false);
+            sameTeamNotMasterUsers.forEach(user => {
+                user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
+            });
+            this.addSystemLog('It\'s the other players turn to guess!');
         }
         this.gameState = GameState.GUESS_TURN;
     }
@@ -213,8 +242,16 @@ class game {
             this.winPoints(this.currentTeam, 1, this.currentMainCircleRotation, guessRotation);
             this.addSystemLog('The guess was correct! ' + this.currentTeam + ' team wins 1 point!');
         } else {
-            this.winPoints(this.currentTeam === 'red' ? 'blue' : 'red', 1, this.currentMainCircleRotation, guessRotation);
-            this.addSystemLog('Oh no, the guess was incorrect! ' + (this.currentTeam === 'red' ? 'blue' : 'red') + ' team wins 1 point!');
+            if(this.gameType === 'coop'){
+                this.winPoints(this.currentTeam, 0, this.currentMainCircleRotation, guessRotation);
+                this.addSystemLog('Oh no, the guess was incorrect! No points won this turn.');
+                this.nextTurn();
+            } 
+            else {
+                this.winPoints(this.currentTeam === 'red' ? 'blue':'red', 1, this.currentMainCircleRotation, guessRotation);
+                this.addSystemLog('Oh no, the guess was incorrect! ' + this.currentTeam + ' team wins 0 points this turn, and the other team wins 1 point!');
+                this.nextTurn();
+            } 
         }
     }
 
@@ -223,12 +260,16 @@ class game {
         user.disconnected = true;
 
         //If the user was the master, the team wins 0 points and we go to the next turn IFF there are at least 2 players in the other team
-        let teamUsers = team === 'red' ? this.redUsers : this.blueUsers;
-        let oppositeTeamUsers = team === 'red' ? this.blueUsers : this.redUsers;
+        let teamUsers = none;
+        if(team !== 'coop') teamUsers = team === 'red' ? this.redUsers : this.blueUsers;
+        else teamUsers = this.coopUsers;
+        let oppositeTeamUsers = none;
+        if(team !== 'coop') oppositeTeamUsers = team === 'red' ? this.blueUsers : this.redUsers;
+        else oppositeTeamUsers = this.coopUsers;
 
         if(user.master){
             //If there are at least 2 players in the opposite team that have disconnected = false, we go to the next turn
-            if(oppositeTeamUsers.filter(user => user.disconnected === false).length >= 2){
+            if(oppositeTeamUsers.filter(user => user.disconnected === false).length >= 2 && this.gameType !== 'coop'){
                 this.winPoints(team, 0, 0, 0, false);
                 this.nextTurn();
                 this.addConnectionLog(user.name + ' disconnected. ' + team + ' team wins 0 points and we go to the next turn.');
@@ -238,6 +279,7 @@ class game {
             //If there are less than 2 players in the opposite team that have disconnected = false, we wait for them to reconnect
         }
     }
+
     onReconnect(user){
         this.addConnectionLog(user.name + ' reconnected!');
         let team = user.team;
@@ -249,8 +291,12 @@ class game {
         }
 
         //If the user was not the master, and the master is on his team not disconnected, we send him the yourGuessTurn message
-        let teamUsers = team === 'red' ? this.redUsers : this.blueUsers;
-        let oppositeTeamUsers = team === 'red' ? this.blueUsers : this.redUsers;
+        let teamUsers = none;
+        if(team !== 'coop') team === 'red' ? this.redUsers : this.blueUsers;
+        else teamUsers = this.coopUsers;
+        let oppositeTeamUsers = none;
+        if(team !== 'coop') oppositeTeamUsers = team === 'red' ? this.blueUsers : this.redUsers;
+        else oppositeTeamUsers = this.coopUsers;
 
         if(!user.master && teamUsers.find(user => user.master === true && user.disconnected === false) && this.gameState === GameState.GUESS_TURN){
             user.ws.send(JSON.stringify({ type: 'yourGuessTurn' }));
@@ -260,7 +306,7 @@ class game {
 
         //We rebroadcast the current card to the user and the scores to this user
         user.ws.send(JSON.stringify({ type: 'newCard', cardTexts: { text1: this.currentCard.text1, text2: this.currentCard.text2 }}));
-        user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore }}));
+        user.ws.send(JSON.stringify({ type: 'updateScores', scores: { red: this.redScore, blue: this.blueScore, coop: this.coopScore}}));
         user.ws.send(JSON.stringify({ type: 'updateLogs', logs: this.logs }));
     }
 };
@@ -422,7 +468,8 @@ sendStartGameResponse = (gameRoomID, roomID) => {
         mainserverSocket.send(JSON.stringify({
             type: 'startGameResponse',
             gameRoomID: gameRoomID,
-            roomID: roomID
+            roomID: roomID,
+            gameType: games[gameRoomID].gameType
         }));
         mainserverSocket.close();
     });

@@ -9,9 +9,10 @@ function GameContainer(){
     const phaserRef = useRef();
     const [users, setUsers] = useState([]);
     const [leftUsers, setLeftUsers] = useState([]); 
-    const [scores, setScores] = useState({red: 0, blue: 0});
+    const [scores, setScores] = useState({red: 0, blue: 0, coop: 0});
     const [logs, setLogs] = useState([]); // [ {username: 'user1', team: 'blue', message: 'message1'}, {username: 'user2', team = 'red', message: 'message2'} ] 
     const gameRoomID = useRef();
+    const gameTypeRef = useRef();
     const location = useLocation();
     const history = useNavigate();
     const userID = useRef();
@@ -28,6 +29,7 @@ function GameContainer(){
         } else {
             gameRoomID.current = gameSessionData.gameRoomID;
             userID.current = gameSessionData.userID;
+            gameTypeRef.current = gameSessionData.gameType;
             setUsers(gameSessionData.users);
             localStorage.setItem('gameSession', JSON.stringify(gameSessionData));
         }
@@ -85,7 +87,6 @@ function GameContainer(){
         ws.current.onopen = () => {
             function sendMessageOnReady(){
                 if(ws.current.readyState === WebSocket.OPEN) {
-                    console.log('Sending user join message with gameRoomID: ', gameRoomID.current, ' and userID: ', userID.current);
                     ws.current.send(JSON.stringify({
                         type: 'userJoin',
                         userID: userID.current,
@@ -107,11 +108,9 @@ function GameContainer(){
                     else setLeftUsers([]);
                 }
                 if(response.type === 'yourTurn') {
-                    console.log('Your turn received');
                     EventBus.emit('your-turn');
                 }
                 if(response.type === 'yourGuessTurn'){
-                    console.log('Your guess turn');
                     EventBus.emit('your-guess-turn');
                 }
                 if(response.type === 'error') {
@@ -121,14 +120,12 @@ function GameContainer(){
                 }
                 if(response.type === 'updateScores'){
                     setScores(response.scores);
-                    console.log('Scores: ', response.scores); 
                 }
                 if(response.type === 'revealScore'){
                     EventBus.emit('reveal-score', response);
                 }
                 if(response.type === 'newCard'){
                     setCardTexts(response.cardTexts);
-                    console.log('New card texts: ', response.cardTexts);
                 }
                 if(response.type === 'updateLogs'){
                     setLogs(response.logs);
@@ -167,6 +164,57 @@ function GameContainer(){
         }
     }, [logs]);
 
+    if(gameTypeRef.current === 'coop') return(
+        <div className='gameApp'>
+            <PhaserGame 
+                ref={phaserRef} 
+                //PASSED DOWN METHODS//
+                currentActiveScene={currentGameScene} 
+                sendServerMessage = {sendServerMessage}
+                ///////////////////////
+            />
+            <div className='gameAppNext'>
+                <div className='teamPoints'>
+                    <div className='teamGame' id = 'teamCoop'>
+                        <h2>Your team</h2>
+                        <ol className='teamlist' id = 'team2list'>
+                            {users.map(user => (
+                                <li className = 'teamNameListElement' key={user.id} style = {{color: user.master ? 'green': 'inherit'}}><span>{user.name}</span></li>
+                            ))}
+                            {leftUsers.filter(user => user.team === 'red').map(user => (
+                                <li className = 'teamNameListElementLeft' key={user.id} style = {{color: user.master ? 'green': 'grey'}}><span>{user.name}</span></li>
+                            ))}
+                        </ol>
+                        <h3>Points: {scores.coop}</h3>
+                    </div>
+                </div>
+                <div className='chat'>
+                    <div className='chatBox' ref={chatBoxRef}>
+                        {logs.map((log, index) => (
+                            <div className='chatMessage' key={index}>
+                                <span style={{color: log.color}}>{log.username}</span>
+                                <span style={{color: log.messageColor}}>: {log.message}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className = 'inputContainer'>
+                        <input type='text' id='chatInput' placeholder='Type to write in chat...'/>
+                        <div className ='sendButton' 
+                            onClick = {sendLog}>Send</div>
+                    </div>
+                </div>
+                <div className='cardTexts'>
+                    <h2>Current Round Card</h2>
+                    <div className='cardText'>
+                        <div className = 'cardT' id = 't1'>{cardTexts.text1}</div>
+                        <div className = 'lineSeparator'></div>
+                        <div className = 'cardT' id = 't2'>{cardTexts.text2}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return(
         <div className='gameApp'>
             <PhaserGame 
@@ -178,7 +226,7 @@ function GameContainer(){
             />
             <div className='gameAppNext'>
                 <div className='teamPoints'>
-                    <div className='team' id = 'team1'>
+                    <div className='teamGame' id = 'team1'>
                         <h2>Team Blue</h2>
                         <ol className='teamlist' id = 'team1list'>
                             {users.filter(user => user.team === 'blue').map(user => (
@@ -190,7 +238,7 @@ function GameContainer(){
                         </ol>
                         <h3>Points: {scores.blue}</h3>
                     </div>
-                    <div className='team' id = 'team2'>
+                    <div className='teamGame' id = 'team2'>
                         <h2>Team Red</h2>
                         <ol className='teamlist' id = 'team2list'>
                             {users.filter(user => user.team === 'red').map(user => (

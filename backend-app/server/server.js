@@ -47,6 +47,7 @@ wss.on('connection', (ws) => {
                         ws.send(JSON.stringify({
                             type: 'startGame',
                             gameRoomID: gameRoomID,
+                            gameType: data.gameType
                         }));
                     }
                 });

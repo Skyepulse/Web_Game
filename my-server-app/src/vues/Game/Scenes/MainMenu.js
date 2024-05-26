@@ -66,6 +66,18 @@ export class MainMenu extends Scene
         this.textContainer = null;
         this.text = null;
         this.textVisible = false;
+
+        //Right Arrow
+        this.rightArrowContainer = null;
+        this.rightArrowGraphicsLine = null;
+        this.rightArrowGraphicsTriangle = null;
+        this.rightArrowText = null;
+
+        //Left Arrow
+        this.leftArrowContainer = null;
+        this.leftArrowGraphicsLine = null;
+        this.leftArrowGraphicsTriangle = null;
+        this.leftArrowText = null;
         
         this.mouse = {mouseX: 0, mouseY: 0, rotation: 0};
     }
@@ -139,6 +151,30 @@ export class MainMenu extends Scene
         this.text.setOrigin(0.5, 0.5);
         this.textContainer.add(this.text);
         this.textContainer.visible = this.textVisible;
+
+        this.rightArrowGraphicsLine = this.add.graphics();
+        this.rightArrowContainer = this.add.container(this.screenX/2 + this.MAIN_CIRCLE_RADIUS + 50, this.screenY/2);
+        this.rightArrowGraphicsLine.fillStyle(0x000000, 1);
+        this.rightArrowGraphicsLine.fillRect(0, 0, 50, 5);
+        this.rightArrowContainer.add(this.rightArrowGraphicsLine);
+        this.rightArrowGraphicsTriangle = this.add.graphics();
+        this.rightArrowGraphicsTriangle.fillStyle(0x000000, 1);
+        this.rightArrowGraphicsTriangle.fillTriangle(100, 2.5, 50, 15, 50, -10);
+        this.rightArrowContainer.add(this.rightArrowGraphicsTriangle);
+        this.rightArrowText = this.add.text(this.screenX/2 + this.MAIN_CIRCLE_RADIUS + 40, this.screenY/2 - 30, 'Most', {fontFamily: 'Arial', fontSize: 24, color: '#000000'});
+
+        this.leftArrowGraphicsLine = this.add.graphics();
+        this.leftArrowContainer = this.add.container(this.screenX/2 - this.MAIN_CIRCLE_RADIUS - 50, this.screenY/2);
+        this.leftArrowGraphicsLine.fillStyle(0x000000, 1);
+        this.leftArrowGraphicsLine.fillRect(-50, 0, 50, 5);
+        this.leftArrowContainer.add(this.leftArrowGraphicsLine);
+        this.leftArrowGraphicsTriangle = this.add.graphics();
+        this.leftArrowGraphicsTriangle.fillStyle(0x000000, 1);
+        this.leftArrowGraphicsTriangle.fillTriangle(-100, 2.5, -50, 15, -50, -10);
+        this.leftArrowContainer.add(this.leftArrowGraphicsTriangle);
+        this.leftArrowText = this.add.text(this.screenX/2 - this.MAIN_CIRCLE_RADIUS - 90, this.screenY/2 - 30, 'Least', {fontFamily: 'Arial', fontSize: 24, color: '#000000'});
+
+        
 
 
         this.input.on('pointermove', (pointer) => {
@@ -363,7 +399,7 @@ export class MainMenu extends Scene
         let team = response.team;
         let shouldReveal = response.shouldReveal;
 
-        this.showText('Score: ' + score + ' Team: ' + team, {color: team === 'red' ? '#ff0000' : '#0000ff'});
+        if(team !== 'coop') this.showText('Score: ' + score + ' Team: ' + team, {color: team === 'red' ? '#ff0000' : '#0000ff'});
 
         if(!shouldReveal){
             if(this.currentMaster){
